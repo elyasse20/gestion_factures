@@ -18,14 +18,12 @@ import {
 import { firebaseService } from '../services/firebaseService'
 import { jsonService } from '../services/jsonService'
 
-// ── Couleurs ──────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
-  'Payée': '#10B981',
+  'Payée':      '#10B981',
   'En attente': '#F59E0B',
-  'Rejetée': '#EF4444',
+  'Rejetée':    '#EF4444',
 }
 
-// ── Composant KPI Card ─────────────────────────────────────────────────────────
 function KpiCard({ label, value, subtitle, icon: Icon, color = '#4F46E5', trend }) {
   return (
     <Card sx={{
@@ -66,7 +64,6 @@ function KpiCard({ label, value, subtitle, icon: Icon, color = '#4F46E5', trend 
   )
 }
 
-// ── Tooltip personnalisé ───────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
     return (
@@ -85,12 +82,11 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
-// ── Dashboard Utilisateur ──────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [invoices, setInvoices]   = useState([])
-  const [clients, setClients]     = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState(null)
+  const [invoices, setInvoices] = useState([])
+  const [clients,  setClients]  = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [error,    setError]    = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -111,7 +107,6 @@ export default function DashboardPage() {
   if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>
   if (error)   return <Alert severity="error">{error}</Alert>
 
-  // ── Calculs KPI ──────────────────────────────────────────────────────────────
   const total        = invoices.length
   const paid         = invoices.filter(i => i.statut === 'Payée')
   const pending      = invoices.filter(i => i.statut === 'En attente')
@@ -120,27 +115,23 @@ export default function DashboardPage() {
   const encaisse     = paid.reduce((s, i) => s + (i.total_ttc || 0), 0)
   const tauxPaiement = total ? Math.round((paid.length / total) * 100) : 0
 
-  // ── Données Graphiques ───────────────────────────────────────────────────────
   const pieData = [
     { name: 'Payée',      value: paid.length },
     { name: 'En attente', value: pending.length },
     { name: 'Rejetée',    value: rejected.length },
   ].filter(d => d.value > 0)
 
-  // Évolution mensuelle
   const monthlyMap = {}
   invoices.forEach(inv => {
     if (!inv.date_creation) return
     const d = new Date(inv.date_creation)
     const key = d.toLocaleString('fr-FR', { month: 'short', year: '2-digit' })
-    if (!monthlyMap[key]) monthlyMap[key] = { name: key, total: 0, paye: 0, count: 0 }
+    if (!monthlyMap[key]) monthlyMap[key] = { name: key, total: 0, paye: 0 }
     monthlyMap[key].total += inv.total_ttc || 0
     if (inv.statut === 'Payée') monthlyMap[key].paye += inv.total_ttc || 0
-    monthlyMap[key].count++
   })
-  const monthlyData = Object.values(monthlyMap).slice(-6) // 6 derniers mois
+  const monthlyData = Object.values(monthlyMap).slice(-6)
 
-  // Top 5 clients par CA
   const clientMap = {}
   invoices.forEach(inv => {
     const cli = clients.find(c => c.id === inv.client_id)
@@ -155,7 +146,7 @@ export default function DashboardPage() {
 
   return (
     <Stack spacing={3}>
-      {/* ── En-tête ── */}
+      {/* En-tête */}
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Box>
           <Typography variant="h4" fontWeight={700}>Tableau de Bord</Typography>
@@ -164,36 +155,20 @@ export default function DashboardPage() {
         <Chip label={`${total} facture${total > 1 ? 's' : ''}`} color="primary" variant="outlined" sx={{ fontWeight: 600 }} />
       </Stack>
 
-      {/* ── KPIs ── */}
+      {/* KPIs */}
       <Grid container spacing={2.5}>
-        <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Total Factures" value={total} subtitle={`${clients.length} clients actifs`}
-            icon={InvoiceIcon} color="#4F46E5" trend={tauxPaiement} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="CA Total TTC" value={`${totalTTC.toFixed(2)} MAD`}
-            subtitle={`Encaissé : ${encaisse.toFixed(2)} MAD`}
-            icon={TrendIcon} color="#10B981" trend={total ? Math.round((encaisse / totalTTC) * 100) : 0} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Taux de Paiement" value={`${tauxPaiement}%`}
-            subtitle={`${paid.length} payée${paid.length > 1 ? 's' : ''} / ${total}`}
-            icon={PaidIcon} color="#0EA5E9" trend={tauxPaiement} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Clients" value={clients.length} subtitle="Clients enregistrés"
-            icon={ClientsIcon} color="#8B5CF6" />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="En Attente" value={pending.length}
-            subtitle={`${pending.reduce((s, i) => s + (i.total_ttc || 0), 0).toFixed(0)} MAD à encaisser`}
-            icon={PendingIcon} color="#F59E0B" trend={total ? Math.round((pending.length / total) * 100) : 0} />
-        </Grid>
-        <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Rejetées" value={rejected.length}
-            subtitle={`${total ? ((rejected.length / total) * 100).toFixed(1) : 0}% du total`}
-            icon={RejectedIcon} color="#EF4444" />
-        </Grid>
+        {[
+          { label: 'Total Factures',   value: total,                               subtitle: `${clients.length} clients actifs`,                               icon: InvoiceIcon, color: '#4F46E5', trend: tauxPaiement },
+          { label: 'CA Total TTC',     value: `${totalTTC.toFixed(2)} MAD`,        subtitle: `Encaissé : ${encaisse.toFixed(0)} MAD`,                          icon: TrendIcon,   color: '#10B981', trend: total ? Math.round((encaisse / (totalTTC || 1)) * 100) : 0 },
+          { label: 'Taux de Paiement', value: `${tauxPaiement}%`,                  subtitle: `${paid.length} payée${paid.length > 1 ? 's' : ''} / ${total}`,   icon: PaidIcon,    color: '#0EA5E9', trend: tauxPaiement },
+          { label: 'Clients',          value: clients.length,                       subtitle: 'Clients enregistrés',                                             icon: ClientsIcon, color: '#8B5CF6' },
+          { label: 'En Attente',       value: pending.length,                       subtitle: `${pending.reduce((s,i) => s + (i.total_ttc||0), 0).toFixed(0)} MAD à encaisser`, icon: PendingIcon,  color: '#F59E0B', trend: total ? Math.round((pending.length/total)*100) : 0 },
+          { label: 'Rejetées',         value: rejected.length,                      subtitle: `${total ? ((rejected.length/total)*100).toFixed(1) : 0}% du total`, icon: RejectedIcon, color: '#EF4444' },
+        ].map((kpi, i) => (
+          <Grid key={i} item xs={12} sm={6} md={4} lg={2}>
+            <KpiCard {...kpi} />
+          </Grid>
+        ))}
       </Grid>
 
       {/* ── 4 Graphiques sur une seule ligne ── */}
@@ -202,24 +177,24 @@ export default function DashboardPage() {
         {/* 1. Évolution mensuelle */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
-            <CardContent>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', pb: '16px !important' }}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Évolution CA</Typography>
-              <Box sx={{ height: 200 }}>
+              <Box sx={{ flex: 1, minHeight: 380 }}>
                 {monthlyData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                    <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                      <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
+                      <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
+                      <YAxis stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 10 }} />
-                      <Bar dataKey="total" name="CA Total" fill="#4F46E5" radius={[3,3,0,0]} />
-                      <Bar dataKey="paye"  name="Encaissé"  fill="#10B981" radius={[3,3,0,0]} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Bar dataKey="total" name="CA Total" fill="#4F46E5" radius={[4,4,0,0]} />
+                      <Bar dataKey="paye"  name="Encaissé"  fill="#10B981" radius={[4,4,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
-                    <Typography variant="caption" color="text.secondary">Aucune donnée</Typography>
+                    <Typography color="text.secondary">Aucune donnée</Typography>
                   </Stack>
                 )}
               </Box>
@@ -230,13 +205,13 @@ export default function DashboardPage() {
         {/* 2. Répartition par statut */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
-            <CardContent>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', pb: '16px !important' }}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
-              <Box sx={{ height: 150 }}>
+              <Box sx={{ flex: 1, minHeight: 300 }}>
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={62}
+                      <Pie data={pieData} cx="50%" cy="45%" innerRadius={70} outerRadius={115}
                         paddingAngle={4} dataKey="value">
                         {pieData.map((entry, i) => (
                           <Cell key={i} fill={STATUS_COLORS[entry.name] || '#6B7280'} />
@@ -247,18 +222,18 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
-                    <Typography variant="caption" color="text.secondary">Aucune donnée</Typography>
+                    <Typography color="text.secondary">Aucune donnée</Typography>
                   </Stack>
                 )}
               </Box>
-              <Stack spacing={0.8} sx={{ mt: 1 }}>
+              <Stack spacing={1} sx={{ mt: 1 }}>
                 {pieData.map(d => (
                   <Stack key={d.name} direction="row" justifyContent="space-between" alignItems="center">
-                    <Stack direction="row" spacing={0.8} alignItems="center">
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
-                      <Typography variant="caption">{d.name}</Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
+                      <Typography variant="body2">{d.name}</Typography>
                     </Stack>
-                    <Typography variant="caption" fontWeight={700}>{d.value}</Typography>
+                    <Typography variant="body2" fontWeight={700}>{d.value}</Typography>
                   </Stack>
                 ))}
               </Stack>
@@ -269,22 +244,22 @@ export default function DashboardPage() {
         {/* 3. Top Clients */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Top Clients</Typography>
-              <Box sx={{ height: 200 }}>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', pb: '16px !important' }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Top Clients par CA</Typography>
+              <Box sx={{ flex: 1, minHeight: 380 }}>
                 {topClients.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topClients} layout="vertical" margin={{ top: 0, right: 10, left: 5, bottom: 0 }}>
+                    <BarChart data={topClients} layout="vertical" margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <YAxis type="category" dataKey="name" width={65} stroke="#9CA3AF" tick={{ fontSize: 10 }} />
+                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" width={70} stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="ca" name="CA TTC" fill="#8B5CF6" radius={[0,3,3,0]} />
+                      <Bar dataKey="ca" name="CA TTC" fill="#8B5CF6" radius={[0,4,4,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
-                    <Typography variant="caption" color="text.secondary">Aucun client</Typography>
+                    <Typography color="text.secondary">Aucun client</Typography>
                   </Stack>
                 )}
               </Box>
@@ -295,30 +270,30 @@ export default function DashboardPage() {
         {/* 4. Dernières Factures */}
         <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
-            <CardContent>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', pb: '16px !important' }}>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Dernières Factures</Typography>
-              <Stack spacing={1} divider={<Divider />}>
-                {invoices.slice(0, 5).map(inv => {
+              <Stack spacing={2} divider={<Divider />} sx={{ flex: 1 }}>
+                {invoices.slice(0, 6).map(inv => {
                   const cli = clients.find(c => c.id === inv.client_id)
                   return (
                     <Stack key={inv.id} direction="row" justifyContent="space-between" alignItems="center">
                       <Box>
-                        <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 90, display: 'block' }}>
+                        <Typography variant="body2" fontWeight={600} noWrap sx={{ maxWidth: 130, display: 'block' }}>
                           {inv.numero}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 90, display: 'block' }}>
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 130, display: 'block' }}>
                           {cli?.nom || '—'}
                         </Typography>
                       </Box>
-                      <Stack alignItems="flex-end" spacing={0.3}>
-                        <Typography variant="caption" fontWeight={700}>
+                      <Stack alignItems="flex-end" spacing={0.4}>
+                        <Typography variant="body2" fontWeight={700}>
                           {(inv.total_ttc || 0).toFixed(0)} MAD
                         </Typography>
                         <Box sx={{
-                          px: 0.7, py: 0.1, borderRadius: 1,
+                          px: 0.8, py: 0.2, borderRadius: 1,
                           bgcolor: `${STATUS_COLORS[inv.statut] || '#6B7280'}20`,
                           color: STATUS_COLORS[inv.statut] || '#6B7280',
-                          fontSize: '0.6rem', fontWeight: 700, whiteSpace: 'nowrap'
+                          fontSize: '0.65rem', fontWeight: 700, whiteSpace: 'nowrap'
                         }}>
                           {inv.statut || '—'}
                         </Box>
@@ -327,7 +302,7 @@ export default function DashboardPage() {
                   )
                 })}
                 {invoices.length === 0 && (
-                  <Typography variant="caption" color="text.secondary" align="center" sx={{ py: 2 }}>
+                  <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
                     Aucune facture
                   </Typography>
                 )}
