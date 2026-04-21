@@ -11,6 +11,16 @@ import {
   update,
 } from 'firebase/database'
 
+const DEFAULT_TIMEOUT_MS = 8000
+
+function withTimeout(promise, ms = DEFAULT_TIMEOUT_MS, label = 'opération Firebase') {
+  let t
+  const timeout = new Promise((_, reject) => {
+    t = setTimeout(() => reject(new Error(`Timeout (${ms}ms) pendant ${label}. Vérifiez votre Realtime Database URL et vos règles.`)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(t))
+}
+
 function getFirebaseConfig() {
   const cfg = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,6 +30,7 @@ function getFirebaseConfig() {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
   }
 
   if (!cfg.apiKey || !cfg.databaseURL || !cfg.projectId) return null
@@ -41,7 +52,7 @@ function ensureDb() {
 
 async function readList(path) {
   const db = ensureDb()
-  const snap = await get(child(ref(db), path))
+  const snap = await withTimeout(get(child(ref(db), path)), DEFAULT_TIMEOUT_MS, `lecture "${path}"`)
   const val = snap.val() || {}
   return Object.entries(val).map(([id, data]) => ({ id, ...data }))
 }
@@ -57,17 +68,17 @@ export const firebaseService = {
   createClient: async (data) => {
     const db = ensureDb()
     const newRef = push(ref(db, 'clients'))
-    await set(newRef, data)
+    await withTimeout(set(newRef, data), DEFAULT_TIMEOUT_MS, 'création client')
     return { id: newRef.key, ...data }
   },
   updateClient: async (id, data) => {
     const db = ensureDb()
-    await update(ref(db, `clients/${id}`), data)
+    await withTimeout(update(ref(db, `clients/${id}`), data), DEFAULT_TIMEOUT_MS, 'mise à jour client')
     return { id, ...data }
   },
   deleteClient: async (id) => {
     const db = ensureDb()
-    await remove(ref(db, `clients/${id}`))
+    await withTimeout(remove(ref(db, `clients/${id}`)), DEFAULT_TIMEOUT_MS, 'suppression client')
     return true
   },
 
@@ -75,17 +86,17 @@ export const firebaseService = {
   createFacture: async (data) => {
     const db = ensureDb()
     const newRef = push(ref(db, 'factures'))
-    await set(newRef, data)
+    await withTimeout(set(newRef, data), DEFAULT_TIMEOUT_MS, 'création facture')
     return { id: newRef.key, ...data }
   },
   updateFacture: async (id, data) => {
     const db = ensureDb()
-    await update(ref(db, `factures/${id}`), data)
+    await withTimeout(update(ref(db, `factures/${id}`), data), DEFAULT_TIMEOUT_MS, 'mise à jour facture')
     return { id, ...data }
   },
   deleteFacture: async (id) => {
     const db = ensureDb()
-    await remove(ref(db, `factures/${id}`))
+    await withTimeout(remove(ref(db, `factures/${id}`)), DEFAULT_TIMEOUT_MS, 'suppression facture')
     return true
   },
 }
