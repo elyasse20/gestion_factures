@@ -3,7 +3,6 @@ import { Link as RouterLink, Outlet, useLocation } from 'react-router-dom'
 import AppBar from '@mui/material/AppBar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Container from '@mui/material/Container'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import Chip from '@mui/material/Chip'
@@ -81,9 +80,9 @@ export default function AppLayout() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box sx={{ py: 4, px: 4 }}>
         <Outlet />
-      </Container>
+      </Box>
     </Box>
   )
 }
