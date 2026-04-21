@@ -1,13 +1,61 @@
 {
   "articles": [
-    { "id": 1, "designation": "Ordinateur", "prix_unitaire": 5000, "categorie_id": 1 },
-    { "id": 2, "designation": "Imprimante", "prix_unitaire": 1200, "categorie_id": 1 },
-    { "id": 3, "designation": "Maintenance (heure)", "prix_unitaire": 300, "categorie_id": 2 }
+    {
+      "id": 1,
+      "designation": "Ordinateur",
+      "prix_unitaire": 5000,
+      "categorie_id": 1
+    },
+    {
+      "id": 2,
+      "designation": "Imprimante",
+      "prix_unitaire": 1200,
+      "categorie_id": 1
+    },
+    {
+      "id": 3,
+      "designation": "Maintenance (heure)",
+      "prix_unitaire": 300,
+      "categorie_id": 2
+    },
+    {
+      "id": 4,
+      "designation": "Écran",
+      "prix_unitaire": 1850,
+      "categorie_id": 1
+    }
   ],
   "categories": [
-    { "id": 1, "nom": "Informatique", "tva": 0.2 },
-    { "id": 2, "nom": "Services", "tva": 0.1 },
-    { "id": 3, "nom": "Formation", "tva": 0 }
+    {
+      "id": 1,
+      "nom": "Informatique",
+      "tva": 0.2
+    },
+    {
+      "id": 2,
+      "nom": "Services",
+      "tva": 0.1
+    },
+    {
+      "id": 3,
+      "nom": "Formation",
+      "tva": 0
+    },
+    {
+      "id": 4,
+      "nom": "Développement Logiciel",
+      "tva": 0.2
+    },
+    {
+      "id": 5,
+      "nom": "Hébergement Cloud",
+      "tva": 0.05
+    },
+    {
+      "id": 6,
+      "nom": "Transport",
+      "tva": 0.2
+    }
   ],
   "parametres": {
     "societe": {
@@ -22,4 +70,3 @@
     }
   }
 }
-
