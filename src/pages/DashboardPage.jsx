@@ -196,15 +196,15 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* ── 4 Graphiques sur une même ligne ── */}
-      <Grid container spacing={2.5}>
+      {/* ── Graphiques 2x2 ── */}
+      <Grid container spacing={3}>
 
         {/* 1. Évolution mensuelle */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>Évolution CA</Typography>
-              <Box sx={{ height: 240 }}>
+              <Box sx={{ height: 280 }}>
                 {monthlyData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -228,11 +228,11 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 2. Répartition par statut */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
-              <Box sx={{ height: 200 }}>
+              <Box sx={{ height: 280 }}>
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -266,17 +266,17 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 3. Top Clients */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>Top Clients</Typography>
-              <Box sx={{ height: 240 }}>
+              <Box sx={{ height: 280 }}>
                 {topClients.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topClients} layout="vertical" margin={{ top: 0, right: 10, left: 5, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
-                      <YAxis type="category" dataKey="name" width={110} stroke="#9CA3AF" tick={{ fontSize: 10 }} />
+                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" width={80} stroke="#9CA3AF" tick={{ fontSize: 11 }} />
                       <Tooltip content={<CustomTooltip />} />
                       <Bar dataKey="ca" name="CA TTC" fill="#8B5CF6" radius={[0,3,3,0]} />
                     </BarChart>
@@ -292,11 +292,11 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 4. Dernières Factures */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" fontWeight={600} gutterBottom>Dernières Factures</Typography>
-              <Stack spacing={1.5} divider={<Divider />}>
+              <Stack spacing={2} divider={<Divider />}>
                 {invoices.slice(0, 5).map(inv => {
                   const cli = clients.find(c => c.id === inv.client_id)
                   return (
