@@ -242,8 +242,9 @@ export default function InvoicesPage() {
 
             <Divider>Informations de suivi</Divider>
 
-            <FormControl fullWidth>
               <InputLabel>Statut</InputLabel>
+              
+            <FormControl fullWidth>
               <Select
                 value={suiviForm.statut}
                 label="Statut"
@@ -255,18 +256,18 @@ export default function InvoicesPage() {
               </Select>
             </FormControl>
 
+            <InputLabel>Date de dépôt</InputLabel>
             <TextField
               fullWidth
-              label="Date de dépôt"
               type="date"
               InputLabelProps={{ shrink: true }}
               value={suiviForm.date_depot}
               onChange={(e) => setSuiviForm({ ...suiviForm, date_depot: e.target.value })}
             />
 
+            <InputLabel>Date d'encaissement</InputLabel>
             <TextField
               fullWidth
-              label="Date d'encaissement"
               type="date"
               InputLabelProps={{ shrink: true }}
               value={suiviForm.date_encaissement}
