@@ -196,29 +196,30 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* ── Graphiques ligne 1 ── */}
+      {/* ── 4 Graphiques sur une seule ligne ── */}
       <Grid container spacing={2.5}>
-        {/* Évolution mensuelle */}
-        <Grid item xs={12} md={8}>
-          <Card>
+
+        {/* 1. Évolution mensuelle */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Évolution Mensuelle du CA</Typography>
-              <Box sx={{ height: 280 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Évolution CA</Typography>
+              <Box sx={{ height: 200 }}>
                 {monthlyData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                      <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-                      <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+                      <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
+                      <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar dataKey="total" name="CA Total" fill="#4F46E5" radius={[4,4,0,0]} />
-                      <Bar dataKey="paye"  name="Encaissé"  fill="#10B981" radius={[4,4,0,0]} />
+                      <Legend wrapperStyle={{ fontSize: 10 }} />
+                      <Bar dataKey="total" name="CA Total" fill="#4F46E5" radius={[3,3,0,0]} />
+                      <Bar dataKey="paye"  name="Encaissé"  fill="#10B981" radius={[3,3,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
-                    <Typography color="text.secondary">Aucune donnée disponible</Typography>
+                    <Typography variant="caption" color="text.secondary">Aucune donnée</Typography>
                   </Stack>
                 )}
               </Box>
@@ -226,16 +227,16 @@ export default function DashboardPage() {
           </Card>
         </Grid>
 
-        {/* Répartition par statut */}
-        <Grid item xs={12} md={4}>
+        {/* 2. Répartition par statut */}
+        <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Répartition par Statut</Typography>
-              <Box sx={{ height: 200 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
+              <Box sx={{ height: 150 }}>
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={62}
                         paddingAngle={4} dataKey="value">
                         {pieData.map((entry, i) => (
                           <Cell key={i} fill={STATUS_COLORS[entry.name] || '#6B7280'} />
@@ -246,16 +247,15 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
-                    <Typography color="text.secondary">Aucune donnée</Typography>
+                    <Typography variant="caption" color="text.secondary">Aucune donnée</Typography>
                   </Stack>
                 )}
               </Box>
-              {/* Légende */}
-              <Stack spacing={1} sx={{ mt: 1 }}>
+              <Stack spacing={0.8} sx={{ mt: 1 }}>
                 {pieData.map(d => (
                   <Stack key={d.name} direction="row" justifyContent="space-between" alignItems="center">
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
+                    <Stack direction="row" spacing={0.8} alignItems="center">
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
                       <Typography variant="caption">{d.name}</Typography>
                     </Stack>
                     <Typography variant="caption" fontWeight={700}>{d.value}</Typography>
@@ -265,29 +265,26 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </Grid>
-      </Grid>
 
-      {/* ── Graphiques ligne 2 ── */}
-      <Grid container spacing={2.5}>
-        {/* Top clients */}
-        <Grid item xs={12} md={5}>
-          <Card>
+        {/* 3. Top Clients */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Top Clients par CA</Typography>
-              <Box sx={{ height: 220 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Top Clients</Typography>
+              <Box sx={{ height: 200 }}>
                 {topClients.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topClients} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                    <BarChart data={topClients} layout="vertical" margin={{ top: 0, right: 10, left: 5, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" width={80} stroke="#9CA3AF" tick={{ fontSize: 11 }} />
+                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
+                      <YAxis type="category" dataKey="name" width={65} stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="ca" name="CA TTC" fill="#8B5CF6" radius={[0,4,4,0]} />
+                      <Bar dataKey="ca" name="CA TTC" fill="#8B5CF6" radius={[0,3,3,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
-                    <Typography color="text.secondary">Aucun client</Typography>
+                    <Typography variant="caption" color="text.secondary">Aucun client</Typography>
                   </Stack>
                 )}
               </Box>
@@ -295,38 +292,42 @@ export default function DashboardPage() {
           </Card>
         </Grid>
 
-        {/* Dernières factures */}
-        <Grid item xs={12} md={7}>
+        {/* 4. Dernières Factures */}
+        <Grid item xs={12} sm={6} md={3}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Dernières Factures</Typography>
-              <Stack spacing={1.5} divider={<Divider />}>
-                {invoices.slice(0, 6).map(inv => {
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Dernières Factures</Typography>
+              <Stack spacing={1} divider={<Divider />}>
+                {invoices.slice(0, 5).map(inv => {
                   const cli = clients.find(c => c.id === inv.client_id)
                   return (
                     <Stack key={inv.id} direction="row" justifyContent="space-between" alignItems="center">
                       <Box>
-                        <Typography variant="body2" fontWeight={600}>{inv.numero}</Typography>
-                        <Typography variant="caption" color="text.secondary">{cli?.nom || '—'}</Typography>
-                      </Box>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography variant="body2" fontWeight={600}>
-                          {(inv.total_ttc || 0).toFixed(2)} MAD
+                        <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 90, display: 'block' }}>
+                          {inv.numero}
                         </Typography>
-                        <Chip
-                          label={inv.statut || 'En attente'}
-                          size="small"
-                          sx={{ fontSize: '0.6rem', height: 20,
-                            bgcolor: `${STATUS_COLORS[inv.statut] || '#6B7280'}20`,
-                            color: STATUS_COLORS[inv.statut] || '#6B7280',
-                            fontWeight: 700 }}
-                        />
+                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 90, display: 'block' }}>
+                          {cli?.nom || '—'}
+                        </Typography>
+                      </Box>
+                      <Stack alignItems="flex-end" spacing={0.3}>
+                        <Typography variant="caption" fontWeight={700}>
+                          {(inv.total_ttc || 0).toFixed(0)} MAD
+                        </Typography>
+                        <Box sx={{
+                          px: 0.7, py: 0.1, borderRadius: 1,
+                          bgcolor: `${STATUS_COLORS[inv.statut] || '#6B7280'}20`,
+                          color: STATUS_COLORS[inv.statut] || '#6B7280',
+                          fontSize: '0.6rem', fontWeight: 700, whiteSpace: 'nowrap'
+                        }}>
+                          {inv.statut || '—'}
+                        </Box>
                       </Stack>
                     </Stack>
                   )
                 })}
                 {invoices.length === 0 && (
-                  <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                  <Typography variant="caption" color="text.secondary" align="center" sx={{ py: 2 }}>
                     Aucune facture
                   </Typography>
                 )}
@@ -334,6 +335,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </Grid>
+
       </Grid>
     </Stack>
   )
