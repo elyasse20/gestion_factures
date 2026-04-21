@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import {
   Card, CardContent, Grid, Stack, Typography,
-  CircularProgress, Alert, Box, Divider, Chip, Avatar, LinearProgress
+  CircularProgress, Alert, Box, Divider, Chip, Avatar, LinearProgress,
+  ToggleButton, ToggleButtonGroup, Skeleton,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, Tooltip as MuiTooltip
 } from '@mui/material'
 import {
   ReceiptLong as InvoiceIcon,
@@ -10,6 +12,7 @@ import {
   HourglassEmpty as PendingIcon,
   Cancel as RejectedIcon,
   CheckCircle as PaidIcon,
+  PictureAsPdf as PdfIcon,
 } from '@mui/icons-material'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -17,6 +20,7 @@ import {
 } from 'recharts'
 import { firebaseService } from '../services/firebaseService'
 import { jsonService } from '../services/jsonService'
+import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -89,34 +93,61 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function DashboardPage() {
   const [invoices, setInvoices]   = useState([])
   const [clients, setClients]     = useState([])
+  const [paramsDb, setParamsDb]   = useState(null)
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
+  const [period, setPeriod]       = useState('30d') // 7d | 30d | 12m | all
+  const [status, setStatus]       = useState('all') // all | Payée | En attente | Rejetée
 
   useEffect(() => {
     async function load() {
       try {
-        const [inv, cli] = await Promise.all([
+        const [inv, cli, pars] = await Promise.all([
           firebaseService.listFactures(),
           firebaseService.listClients(),
+          jsonService.getParams().catch(() => null),
         ])
         inv.sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation))
         setInvoices(inv)
         setClients(cli)
+        setParamsDb(pars)
       } catch (err) { setError(err.message) }
       finally { setLoading(false) }
     }
     load()
   }, [])
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}><CircularProgress /></Box>
-  if (error)   return <Alert severity="error">{error}</Alert>
+  const now = Date.now()
+  const periodStart = (() => {
+    switch (period) {
+      case '7d': return now - 7 * 24 * 60 * 60 * 1000
+      case '30d': return now - 30 * 24 * 60 * 60 * 1000
+      case '12m': return now - 365 * 24 * 60 * 60 * 1000
+      default: return 0
+    }
+  })()
+
+  const clientsById = React.useMemo(() => {
+    const map = new Map()
+    clients.forEach((c) => map.set(c.id, c))
+    return map
+  }, [clients])
+
+  const filteredInvoices = React.useMemo(() => {
+    const byPeriod = invoices.filter((inv) => {
+      const t = inv?.date_creation ? new Date(inv.date_creation).getTime() : 0
+      return !periodStart || (t && t >= periodStart)
+    })
+    if (status === 'all') return byPeriod
+    return byPeriod.filter((inv) => (inv?.statut || '—') === status)
+  }, [invoices, periodStart, status])
 
   // ── Calculs KPI ──────────────────────────────────────────────────────────────
-  const total        = invoices.length
-  const paid         = invoices.filter(i => i.statut === 'Payée')
-  const pending      = invoices.filter(i => i.statut === 'En attente')
-  const rejected     = invoices.filter(i => i.statut === 'Rejetée')
-  const totalTTC     = invoices.reduce((s, i) => s + (i.total_ttc || 0), 0)
+  const total        = filteredInvoices.length
+  const paid         = filteredInvoices.filter(i => i.statut === 'Payée')
+  const pending      = filteredInvoices.filter(i => i.statut === 'En attente')
+  const rejected     = filteredInvoices.filter(i => i.statut === 'Rejetée')
+  const totalTTC     = filteredInvoices.reduce((s, i) => s + (i.total_ttc || 0), 0)
   const encaisse     = paid.reduce((s, i) => s + (i.total_ttc || 0), 0)
   const tauxPaiement = total ? Math.round((paid.length / total) * 100) : 0
 
@@ -129,7 +160,7 @@ export default function DashboardPage() {
 
   // Évolution mensuelle
   const monthlyMap = {}
-  invoices.forEach(inv => {
+  filteredInvoices.forEach(inv => {
     if (!inv.date_creation) return
     const d = new Date(inv.date_creation)
     const key = d.toLocaleString('fr-FR', { month: 'short', year: '2-digit' })
@@ -142,8 +173,8 @@ export default function DashboardPage() {
 
   // Top 5 clients par CA
   const clientMap = {}
-  invoices.forEach(inv => {
-    const cli = clients.find(c => c.id === inv.client_id)
+  filteredInvoices.forEach(inv => {
+    const cli = clientsById.get(inv.client_id)
     const nom = cli?.nom || 'Inconnu'
     if (!clientMap[nom]) clientMap[nom] = 0
     clientMap[nom] += inv.total_ttc || 0
@@ -153,58 +184,113 @@ export default function DashboardPage() {
     .slice(0, 5)
     .map(([name, ca]) => ({ name, ca }))
 
+  const handleDownloadPdf = (inv) => {
+    const cli = clientsById.get(inv.client_id)
+    generateInvoicePDF(inv, cli, paramsDb)
+  }
+
   return (
     <Stack spacing={3}>
       {/* ── En-tête ── */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between" spacing={1.5}>
         <Box>
           <Typography variant="h4" fontWeight={700}>Tableau de Bord</Typography>
           <Typography variant="body2" color="text.secondary">Vue d'ensemble de vos factures</Typography>
         </Box>
-        <Chip label={`${total} facture${total > 1 ? 's' : ''}`} color="primary" variant="outlined" sx={{ fontWeight: 600 }} />
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={period}
+            onChange={(_, v) => v && setPeriod(v)}
+          >
+            <ToggleButton value="7d">7j</ToggleButton>
+            <ToggleButton value="30d">30j</ToggleButton>
+            <ToggleButton value="12m">12m</ToggleButton>
+            <ToggleButton value="all">Tout</ToggleButton>
+          </ToggleButtonGroup>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={status}
+            onChange={(_, v) => v && setStatus(v)}
+          >
+            <ToggleButton value="all">Tous</ToggleButton>
+            <ToggleButton value="En attente">En attente</ToggleButton>
+            <ToggleButton value="Payée">Payée</ToggleButton>
+            <ToggleButton value="Rejetée">Rejetée</ToggleButton>
+          </ToggleButtonGroup>
+          <Chip label={`${total} facture${total > 1 ? 's' : ''}`} color="primary" variant="outlined" sx={{ fontWeight: 600, alignSelf: { xs: 'flex-start', sm: 'center' } }} />
+        </Stack>
       </Stack>
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
 
       {/* ── KPIs ── */}
       <Grid container spacing={2.5}>
         <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Total Factures" value={total} subtitle={`${clients.length} clients actifs`}
-            icon={InvoiceIcon} color="#4F46E5" trend={tauxPaiement} />
+          {loading ? (
+            <Card sx={{ height: '100%' }}><CardContent><Skeleton variant="rounded" height={88} /></CardContent></Card>
+          ) : (
+            <KpiCard label="Total Factures" value={total} subtitle={`${clients.length} clients actifs`}
+              icon={InvoiceIcon} color="#4F46E5" trend={tauxPaiement} />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="CA Total TTC" value={`${totalTTC.toFixed(2)} MAD`}
-            subtitle={`Encaissé : ${encaisse.toFixed(2)} MAD`}
-            icon={TrendIcon} color="#10B981" trend={total ? Math.round((encaisse / totalTTC) * 100) : 0} />
+          {loading ? (
+            <Card sx={{ height: '100%' }}><CardContent><Skeleton variant="rounded" height={88} /></CardContent></Card>
+          ) : (
+            <KpiCard label="CA Total TTC" value={`${totalTTC.toFixed(2)} MAD`}
+              subtitle={`Encaissé : ${encaisse.toFixed(2)} MAD`}
+              icon={TrendIcon} color="#10B981" trend={total ? Math.round((encaisse / totalTTC) * 100) : 0} />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Taux de Paiement" value={`${tauxPaiement}%`}
-            subtitle={`${paid.length} payée${paid.length > 1 ? 's' : ''} / ${total}`}
-            icon={PaidIcon} color="#0EA5E9" trend={tauxPaiement} />
+          {loading ? (
+            <Card sx={{ height: '100%' }}><CardContent><Skeleton variant="rounded" height={88} /></CardContent></Card>
+          ) : (
+            <KpiCard label="Taux de Paiement" value={`${tauxPaiement}%`}
+              subtitle={`${paid.length} payée${paid.length > 1 ? 's' : ''} / ${total}`}
+              icon={PaidIcon} color="#0EA5E9" trend={tauxPaiement} />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Clients" value={clients.length} subtitle="Clients enregistrés"
-            icon={ClientsIcon} color="#8B5CF6" />
+          {loading ? (
+            <Card sx={{ height: '100%' }}><CardContent><Skeleton variant="rounded" height={88} /></CardContent></Card>
+          ) : (
+            <KpiCard label="Clients" value={clients.length} subtitle="Clients enregistrés"
+              icon={ClientsIcon} color="#8B5CF6" />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="En Attente" value={pending.length}
-            subtitle={`${pending.reduce((s, i) => s + (i.total_ttc || 0), 0).toFixed(0)} MAD à encaisser`}
-            icon={PendingIcon} color="#F59E0B" trend={total ? Math.round((pending.length / total) * 100) : 0} />
+          {loading ? (
+            <Card sx={{ height: '100%' }}><CardContent><Skeleton variant="rounded" height={88} /></CardContent></Card>
+          ) : (
+            <KpiCard label="En Attente" value={pending.length}
+              subtitle={`${pending.reduce((s, i) => s + (i.total_ttc || 0), 0).toFixed(0)} MAD à encaisser`}
+              icon={PendingIcon} color="#F59E0B" trend={total ? Math.round((pending.length / total) * 100) : 0} />
+          )}
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
-          <KpiCard label="Rejetées" value={rejected.length}
-            subtitle={`${total ? ((rejected.length / total) * 100).toFixed(1) : 0}% du total`}
-            icon={RejectedIcon} color="#EF4444" />
+          {loading ? (
+            <Card sx={{ height: '100%' }}><CardContent><Skeleton variant="rounded" height={88} /></CardContent></Card>
+          ) : (
+            <KpiCard label="Rejetées" value={rejected.length}
+              subtitle={`${total ? ((rejected.length / total) * 100).toFixed(1) : 0}% du total`}
+              icon={RejectedIcon} color="#EF4444" />
+          )}
         </Grid>
       </Grid>
 
-      {/* ── Graphiques 2x2 ── */}
-      <Grid container spacing={3}>
+      {/* ── 4 Graphiques sur une seule ligne ── */}
+      <Grid container spacing={2.5}>
 
         {/* 1. Évolution mensuelle */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} sm={6} md={2} lg={2}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Évolution CA</Typography>
-              <Box sx={{ height: 280 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Évolution CA</Typography>
+              <Box sx={{ height: 200 }}>
                 {monthlyData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -212,7 +298,6 @@ export default function DashboardPage() {
                       <XAxis dataKey="name" stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                       <YAxis stroke="#9CA3AF" tick={{ fontSize: 10 }} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Legend wrapperStyle={{ fontSize: 10 }} />
                       <Bar dataKey="total" name="CA Total" fill="#4F46E5" radius={[3,3,0,0]} />
                       <Bar dataKey="paye"  name="Encaissé"  fill="#10B981" radius={[3,3,0,0]} />
                     </BarChart>
@@ -228,11 +313,11 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 2. Répartition par statut */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} sm={6} md={2} lg={2}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
-              <Box sx={{ height: 280 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
+              <Box sx={{ height: 150 }}>
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -251,13 +336,14 @@ export default function DashboardPage() {
                   </Stack>
                 )}
               </Box>
-              {/* Légende */}
-              <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ mt: 1, flexWrap: 'wrap' }}>
+              <Stack spacing={0.8} sx={{ mt: 1 }}>
                 {pieData.map(d => (
-                  <Stack key={d.name} direction="row" spacing={0.5} alignItems="center">
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
-                    <Typography variant="caption">{d.name}</Typography>
-                    <Typography variant="caption" fontWeight={700}>({d.value})</Typography>
+                  <Stack key={d.name} direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack direction="row" spacing={0.8} alignItems="center">
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
+                      <Typography variant="caption">{d.name}</Typography>
+                    </Stack>
+                    <Typography variant="caption" fontWeight={700}>{d.value}</Typography>
                   </Stack>
                 ))}
               </Stack>
@@ -266,21 +352,43 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 3. Top Clients */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} sm={6} md={2} lg={2}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Top Clients</Typography>
-              <Box sx={{ height: 280 }}>
+              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Top Clients</Typography>
+              <Box sx={{ height: 200 }}>
                 {topClients.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={topClients} layout="vertical" margin={{ top: 0, right: 10, left: 5, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
-                      <XAxis type="number" stroke="#9CA3AF" tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" width={80} stroke="#9CA3AF" tick={{ fontSize: 11 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="ca" name="CA TTC" fill="#8B5CF6" radius={[0,3,3,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <Stack spacing={1.2} sx={{ height: '100%', justifyContent: 'center' }}>
+                    {(() => {
+                      const max = Math.max(...topClients.map((c) => c.ca || 0), 1)
+                      return topClients.map((c) => {
+                        const pct = Math.round(((c.ca || 0) / max) * 100)
+                        return (
+                          <Box key={c.name}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+                              <Typography variant="caption" fontWeight={700} noWrap title={c.name} sx={{ maxWidth: 90 }}>
+                                {c.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
+                                {(c.ca || 0).toFixed(0)} MAD
+                              </Typography>
+                            </Stack>
+                            <LinearProgress
+                              variant="determinate"
+                              value={pct}
+                              sx={{
+                                mt: 0.6,
+                                height: 6,
+                                borderRadius: 999,
+                                bgcolor: '#8B5CF620',
+                                '& .MuiLinearProgress-bar': { bgcolor: '#8B5CF6' },
+                              }}
+                            />
+                          </Box>
+                        )
+                      })
+                    })()}
+                  </Stack>
                 ) : (
                   <Stack justifyContent="center" alignItems="center" sx={{ height: '100%' }}>
                     <Typography variant="caption" color="text.secondary">Aucun client</Typography>
@@ -291,42 +399,92 @@ export default function DashboardPage() {
           </Card>
         </Grid>
 
-        {/* 4. Dernières Factures */}
-        <Grid item xs={12} md={6}>
+        {/* 4. Dernières Factures (table) */}
+        <Grid item xs={12} md={6} lg={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom>Dernières Factures</Typography>
-              <Stack spacing={2} divider={<Divider />}>
-                {invoices.slice(0, 5).map(inv => {
-                  const cli = clients.find(c => c.id === inv.client_id)
-                  return (
-                    <Stack key={inv.id} direction="row" justifyContent="space-between" alignItems="center">
-                      <Box>
-                        <Typography variant="body1" fontWeight={600}>{inv.numero}</Typography>
-                        <Typography variant="body2" color="text.secondary">{cli?.nom || '—'}</Typography>
-                      </Box>
-                      <Stack alignItems="flex-end" spacing={0.5}>
-                        <Typography variant="body1" fontWeight={700}>
-                          {(inv.total_ttc || 0).toFixed(2)} MAD
-                        </Typography>
-                        <Box sx={{
-                          px: 1, py: 0.2, borderRadius: 1,
-                          bgcolor: `${STATUS_COLORS[inv.statut] || '#6B7280'}20`,
-                          color: STATUS_COLORS[inv.statut] || '#6B7280',
-                          fontSize: '0.75rem', fontWeight: 700
-                        }}>
-                          {inv.statut || '—'}
-                        </Box>
-                      </Stack>
-                    </Stack>
-                  )
-                })}
-                {invoices.length === 0 && (
-                  <Typography variant="caption" color="text.secondary" align="center" sx={{ py: 2 }}>
-                    Aucune facture
-                  </Typography>
-                )}
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle1" fontWeight={600}>Dernières Factures</Typography>
+                <Button size="small" href="/factures" sx={{ textTransform: 'none' }}>
+                  Voir tout
+                </Button>
               </Stack>
+
+              {loading ? (
+                <Stack spacing={1}>
+                  <Skeleton variant="rounded" height={34} />
+                  <Skeleton variant="rounded" height={34} />
+                  <Skeleton variant="rounded" height={34} />
+                  <Skeleton variant="rounded" height={34} />
+                </Stack>
+              ) : filteredInvoices.length === 0 ? (
+                <Box sx={{ py: 6, textAlign: 'center' }}>
+                  <Typography fontWeight={700}>Aucune facture</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    Créez une première facture pour alimenter le dashboard.
+                  </Typography>
+                  <Button variant="contained" size="small" sx={{ mt: 2, textTransform: 'none' }} href="/factures/nouvelle">
+                    Créer une facture
+                  </Button>
+                </Box>
+              ) : (
+                <TableContainer sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>N°</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Client</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="center">Statut</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="right">Total</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }} align="center">PDF</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredInvoices.slice(0, 8).map((inv) => {
+                        const cli = clientsById.get(inv.client_id)
+                        const statusColor = STATUS_COLORS[inv.statut] || '#6B7280'
+                        return (
+                          <TableRow key={inv.id} hover>
+                            <TableCell sx={{ fontWeight: 700, maxWidth: 260 }}>
+                              <Typography variant="body2" noWrap title={inv.numero}>{inv.numero}</Typography>
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 280 }}>
+                              <Typography variant="body2" noWrap title={cli?.nom || '—'}>{cli?.nom || '—'}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {inv.date_creation ? new Date(inv.date_creation).toLocaleDateString('fr-FR') : '—'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Chip
+                                label={inv.statut || '—'}
+                                size="small"
+                                sx={{
+                                  fontWeight: 800,
+                                  bgcolor: `${statusColor}20`,
+                                  color: statusColor,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 800 }}>
+                              {(inv.total_ttc || 0).toFixed(2)} MAD
+                            </TableCell>
+                            <TableCell align="center">
+                              <MuiTooltip title="Télécharger PDF">
+                                <IconButton size="small" color="primary" onClick={() => handleDownloadPdf(inv)}>
+                                  <PdfIcon fontSize="small" />
+                                </IconButton>
+                              </MuiTooltip>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </CardContent>
           </Card>
         </Grid>
