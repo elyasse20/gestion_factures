@@ -196,15 +196,15 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
 
-      {/* ── 4 Graphiques sur une seule ligne ── */}
+      {/* ── Graphiques Pleine Largeur ── */}
       <Grid container spacing={2.5}>
 
         {/* 1. Évolution mensuelle */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
+        <Grid item xs={12} md={12}>
+          <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Évolution CA</Typography>
-              <Box sx={{ height: 200 }}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>Évolution CA</Typography>
+              <Box sx={{ height: 300 }}>
                 {monthlyData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
@@ -228,11 +228,11 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 2. Répartition par statut */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
+        <Grid item xs={12} md={12}>
+          <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
-              <Box sx={{ height: 150 }}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>Répartition Statuts</Typography>
+              <Box sx={{ height: 300 }}>
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -251,14 +251,13 @@ export default function DashboardPage() {
                   </Stack>
                 )}
               </Box>
-              <Stack spacing={0.8} sx={{ mt: 1 }}>
+              {/* Légende */}
+              <Stack direction="row" spacing={3} justifyContent="center" sx={{ mt: 2 }}>
                 {pieData.map(d => (
-                  <Stack key={d.name} direction="row" justifyContent="space-between" alignItems="center">
-                    <Stack direction="row" spacing={0.8} alignItems="center">
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
-                      <Typography variant="caption">{d.name}</Typography>
-                    </Stack>
-                    <Typography variant="caption" fontWeight={700}>{d.value}</Typography>
+                  <Stack key={d.name} direction="row" spacing={1} alignItems="center">
+                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: STATUS_COLORS[d.name] }} />
+                    <Typography variant="body2">{d.name}</Typography>
+                    <Typography variant="body2" fontWeight={700}>({d.value})</Typography>
                   </Stack>
                 ))}
               </Stack>
@@ -267,11 +266,11 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 3. Top Clients */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
+        <Grid item xs={12} md={12}>
+          <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Top Clients</Typography>
-              <Box sx={{ height: 200 }}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>Top Clients</Typography>
+              <Box sx={{ height: 300 }}>
                 {topClients.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topClients} layout="vertical" margin={{ top: 0, right: 10, left: 5, bottom: 0 }}>
@@ -293,32 +292,28 @@ export default function DashboardPage() {
         </Grid>
 
         {/* 4. Dernières Factures */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ height: '100%' }}>
+        <Grid item xs={12} md={12}>
+          <Card>
             <CardContent>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>Dernières Factures</Typography>
-              <Stack spacing={1} divider={<Divider />}>
+              <Typography variant="h6" fontWeight={600} gutterBottom>Dernières Factures</Typography>
+              <Stack spacing={2} divider={<Divider />}>
                 {invoices.slice(0, 5).map(inv => {
                   const cli = clients.find(c => c.id === inv.client_id)
                   return (
                     <Stack key={inv.id} direction="row" justifyContent="space-between" alignItems="center">
                       <Box>
-                        <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 90, display: 'block' }}>
-                          {inv.numero}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 90, display: 'block' }}>
-                          {cli?.nom || '—'}
-                        </Typography>
+                        <Typography variant="body1" fontWeight={600}>{inv.numero}</Typography>
+                        <Typography variant="body2" color="text.secondary">{cli?.nom || '—'}</Typography>
                       </Box>
-                      <Stack alignItems="flex-end" spacing={0.3}>
-                        <Typography variant="caption" fontWeight={700}>
-                          {(inv.total_ttc || 0).toFixed(0)} MAD
+                      <Stack alignItems="flex-end" spacing={0.5}>
+                        <Typography variant="body1" fontWeight={700}>
+                          {(inv.total_ttc || 0).toFixed(2)} MAD
                         </Typography>
                         <Box sx={{
-                          px: 0.7, py: 0.1, borderRadius: 1,
+                          px: 1, py: 0.2, borderRadius: 1,
                           bgcolor: `${STATUS_COLORS[inv.statut] || '#6B7280'}20`,
                           color: STATUS_COLORS[inv.statut] || '#6B7280',
-                          fontSize: '0.6rem', fontWeight: 700, whiteSpace: 'nowrap'
+                          fontSize: '0.75rem', fontWeight: 700
                         }}>
                           {inv.statut || '—'}
                         </Box>
