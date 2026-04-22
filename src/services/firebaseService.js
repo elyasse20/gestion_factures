@@ -9,6 +9,9 @@ import {
   get,
   child,
   update,
+  query,
+  orderByChild,
+  equalTo,
 } from 'firebase/database'
 
 const DEFAULT_TIMEOUT_MS = 8000
@@ -82,7 +85,16 @@ export const firebaseService = {
     return true
   },
 
-  listFactures: () => readList('factures'),
+  listFactures: async (role, userId) => {
+    if (role === 'admin' || !userId) {
+      return readList('factures')
+    }
+    const db = ensureDb()
+    const q = query(ref(db, 'factures'), orderByChild('agent_id'), equalTo(userId))
+    const snap = await withTimeout(get(q), DEFAULT_TIMEOUT_MS, `lecture factures agent=${userId}`)
+    const val = snap.val() || {}
+    return Object.entries(val).map(([id, data]) => ({ id, ...data }))
+  },
   createFacture: async (data) => {
     const db = ensureDb()
     const newRef = push(ref(db, 'factures'))

@@ -47,7 +47,7 @@ export default function AdminValidationPage() {
     try {
       setLoading(true)
       const [invData, cliData, parData] = await Promise.all([
-        firebaseService.listFactures(),
+        firebaseService.listFactures('admin'),
         firebaseService.listClients(),
         jsonService.getParams(),
       ])

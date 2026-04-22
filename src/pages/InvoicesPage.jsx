@@ -32,6 +32,7 @@ import { Add as AddIcon, PictureAsPdf as PdfIcon, Visibility as ViewIcon } from 
 import { firebaseService } from '../services/firebaseService'
 import { jsonService } from '../services/jsonService'
 import { generateInvoicePDF } from '../utils/pdfGenerator'
+import { useAuth } from '../contexts/AuthContext'
 
 const STATUS_COLORS = {
   'En attente': 'warning',
@@ -42,6 +43,7 @@ const STATUS_COLORS = {
 const VIREMENT_TYPES = ['Virement bancaire', 'Chèque', 'Espèces', 'Carte bancaire', 'Autre']
 
 export default function InvoicesPage() {
+  const { user, role } = useAuth()
   const [invoices, setInvoices] = useState([])
   const [clients, setClients] = useState([])
   const [paramsDb, setParamsDb] = useState(null)
@@ -65,7 +67,7 @@ export default function InvoicesPage() {
     try {
       setLoading(true)
       const [invData, cliData, parData] = await Promise.all([
-        firebaseService.listFactures(),
+        firebaseService.listFactures(role, user?.uid),
         firebaseService.listClients(),
         jsonService.getParams(),
       ])

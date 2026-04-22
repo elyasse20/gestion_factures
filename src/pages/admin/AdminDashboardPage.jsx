@@ -22,6 +22,7 @@ import {
 import { firebaseService } from '../../services/firebaseService'
 import { jsonService } from '../../services/jsonService'
 import { generateInvoicePDF } from '../../utils/pdfGenerator'
+import { useAuth } from '../../contexts/AuthContext'
 
 // ── Couleurs ──────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -92,6 +93,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // ── Dashboard Utilisateur ──────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
+  const { user, role } = useAuth()
   const [invoices, setInvoices]   = useState([])
   const [clients, setClients]     = useState([])
   const [paramsDb, setParamsDb]   = useState(null)
@@ -106,7 +108,7 @@ export default function AdminDashboardPage() {
     async function load() {
       try {
         const [inv, cli, pars, arts, cats] = await Promise.all([
-          firebaseService.listFactures(),
+          firebaseService.listFactures(role, user?.uid),
           firebaseService.listClients(),
           jsonService.getParams().catch(() => null),
           jsonService.listArticles().catch(() => []),
@@ -364,7 +366,7 @@ export default function AdminDashboardPage() {
         </Grid>
 
         {/* 3. Top Clients */}
-        <Grid item xs={12} sm={6} md={2} lg={2}>
+        <Grid item xs={12} sm={6} md={4} lg={4}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="subtitle1" fontWeight={600} gutterBottom>Top Clients</Typography>
@@ -378,7 +380,7 @@ export default function AdminDashboardPage() {
                         return (
                           <Box key={c.name}>
                             <Stack direction="row" justifyContent="space-between" alignItems="baseline">
-                              <Typography variant="caption" fontWeight={700} noWrap title={c.name} sx={{ maxWidth: 90 }}>
+                              <Typography variant="caption" fontWeight={700} noWrap title={c.name} sx={{ maxWidth: 140 }}>
                                 {c.name}
                               </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
@@ -412,7 +414,7 @@ export default function AdminDashboardPage() {
         </Grid>
 
         {/* 4. Dernières Factures (table) */}
-        <Grid item xs={12} md={6} lg={6}>
+        <Grid item xs={12} md={5} lg={5}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>

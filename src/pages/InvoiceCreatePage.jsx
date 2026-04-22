@@ -22,12 +22,14 @@ import {
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, PictureAsPdf as PdfIcon, Save as SaveIcon } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { firebaseService } from '../services/firebaseService'
 import { jsonService } from '../services/jsonService'
 import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 export default function InvoiceCreatePage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [clients, setClients] = useState([])
   const [articlesDb, setArticlesDb] = useState([])
   const [categoriesDb, setCategoriesDb] = useState([])
@@ -164,6 +166,7 @@ export default function InvoiceCreatePage() {
         date_encaissement: null,
         type_virement: null,
         validated_by_admin: false,
+        agent_id: user?.uid || null,
       }
 
       await firebaseService.createFacture(factureData)
@@ -202,49 +205,48 @@ export default function InvoiceCreatePage() {
 
       <Card>
         <CardContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Client</InputLabel>
-                <Select
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  label="Client"
-                >
-                  {clients.map(c => (
-                    <MenuItem key={c.id} value={c.id}>{c.nom}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Méthode de Calcul</InputLabel>
-                <Select
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value)}
-                  label="Méthode de Calcul"
-                >
-                  <MenuItem value="SIMPLE">Simple (HT + TVA globale)</MenuItem>
-                  <MenuItem value="REMISE_LIGNE">Remise par ligne</MenuItem>
-                  <MenuItem value="REMISE_GLOBALE">Remise globale</MenuItem>
-                  <MenuItem value="CATEGORIE">TVA par catégorie</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+            <FormControl fullWidth sx={{ flex: 1 }}>
+              <InputLabel id="client-select-label">Client</InputLabel>
+              <Select
+                labelId="client-select-label"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                label="Client"
+              >
+                {clients.map(c => (
+                  <MenuItem key={c.id} value={c.id}>{c.nom}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth sx={{ flex: 1 }}>
+              <InputLabel id="method-select-label">Méthode de Calcul</InputLabel>
+              <Select
+                labelId="method-select-label"
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                label="Méthode de Calcul"
+              >
+                <MenuItem value="SIMPLE">Simple (HT + TVA globale)</MenuItem>
+                <MenuItem value="REMISE_LIGNE">Remise par ligne</MenuItem>
+                <MenuItem value="REMISE_GLOBALE">Remise globale</MenuItem>
+                <MenuItem value="CATEGORIE">TVA par catégorie</MenuItem>
+              </Select>
+            </FormControl>
+
             {method === 'REMISE_GLOBALE' && (
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Remise globale (%)"
-                  type="number"
-                  value={remiseGlobale}
-                  onChange={(e) => setRemiseGlobale(Number(e.target.value))}
-                  inputProps={{ min: 0, max: 100 }}
-                />
-              </Grid>
+              <TextField
+                fullWidth
+                sx={{ flex: 1 }}
+                label="Remise globale (%)"
+                type="number"
+                value={remiseGlobale}
+                onChange={(e) => setRemiseGlobale(Number(e.target.value))}
+                inputProps={{ min: 0, max: 100 }}
+              />
             )}
-          </Grid>
+          </Stack>
         </CardContent>
       </Card>
 
