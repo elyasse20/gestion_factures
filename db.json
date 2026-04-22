@@ -23,6 +23,18 @@
       "designation": "Écran",
       "prix_unitaire": 1850,
       "categorie_id": 1
+    },
+    {
+      "designation": "programation en Python",
+      "prix_unitaire": 1000,
+      "categorie_id": 3,
+      "id": 5
+    },
+    {
+      "designation": "voiture",
+      "prix_unitaire": 10000,
+      "categorie_id": 6,
+      "id": 6
     }
   ],
   "categories": [

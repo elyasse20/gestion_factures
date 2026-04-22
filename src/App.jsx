@@ -4,7 +4,6 @@ import AppLayout from './components/layout/AppLayout.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 
 // USER pages
-import DashboardPage from './pages/DashboardPage.jsx'
 import ClientsPage from './pages/ClientsPage.jsx'
 import InvoicesPage from './pages/InvoicesPage.jsx'
 import InvoiceCreatePage from './pages/InvoiceCreatePage.jsx'
@@ -37,7 +36,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           {/* 1. Dashboard personnel */}
-          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
           {/* 2. Gestion des clients */}
           <Route path="clients" element={<ClientsPage />} />
           {/* 3. Historique & suivi factures */}

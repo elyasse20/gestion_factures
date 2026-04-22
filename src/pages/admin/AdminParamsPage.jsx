@@ -18,7 +18,8 @@ import {
   TableRow,
   TextField,
   Typography,
-  Alert
+  Alert,
+  TablePagination
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Save as SaveIcon } from '@mui/icons-material'
 import { jsonService } from '../../services/jsonService'
@@ -33,6 +34,12 @@ export default function AdminParamsPage() {
   const [openArticle, setOpenArticle] = useState(false)
   const [openCategory, setOpenCategory] = useState(false)
   
+  // Pagination states
+  const [catPage, setCatPage] = useState(0)
+  const [catRowsPerPage, setCatRowsPerPage] = useState(5)
+  const [artPage, setArtPage] = useState(0)
+  const [artRowsPerPage, setArtRowsPerPage] = useState(5)
+
   // Forms states
   const [articleForm, setArticleForm] = useState({ id: null, designation: '', prix_unitaire: 0, categorie_id: '' })
   const [categoryForm, setCategoryForm] = useState({ id: null, nom: '', tva: 0 })
@@ -96,6 +103,9 @@ export default function AdminParamsPage() {
     } catch(err) { setError(err.message) }
   }
 
+  const paginatedCategories = categories.slice(catPage * catRowsPerPage, catPage * catRowsPerPage + catRowsPerPage)
+  const paginatedArticles = articles.slice(artPage * artRowsPerPage, artPage * artRowsPerPage + artRowsPerPage)
+
   return (
     <Stack spacing={4}>
       <Typography variant="h4">Administration · Paramètres</Typography>
@@ -119,10 +129,10 @@ export default function AdminParamsPage() {
         </Grid>
 
         <Grid item xs={12} md={8}>
-          <Stack spacing={4}>
-            
-            <Card>
-              <CardContent>
+          <Grid container spacing={4}>
+            <Grid item xs={12} lg={6} sx={{ display: 'flex' }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ width: '100%' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h6">Gestion des Catégories</Typography>
                   <Button startIcon={<AddIcon />} variant="outlined" onClick={() => { setCategoryForm({ id: null, nom: '', tva: 0 }); setOpenCategory(true)}}>
@@ -140,7 +150,7 @@ export default function AdminParamsPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {categories.map(c => (
+                      {paginatedCategories.map(c => (
                         <TableRow key={c.id}>
                           <TableCell>{c.id}</TableCell>
                           <TableCell>{c.nom}</TableCell>
@@ -154,11 +164,26 @@ export default function AdminParamsPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+                <TablePagination
+                  component="div"
+                  count={categories.length}
+                  page={catPage}
+                  onPageChange={(e, newPage) => setCatPage(newPage)}
+                  rowsPerPage={catRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setCatRowsPerPage(parseInt(e.target.value, 10))
+                    setCatPage(0)
+                  }}
+                  labelRowsPerPage="Lignes par page :"
+                  rowsPerPageOptions={[5, 10, 25]}
+                />
               </CardContent>
             </Card>
+            </Grid>
 
-            <Card>
-              <CardContent>
+            <Grid item xs={12} lg={6} sx={{ display: 'flex' }}>
+            <Card sx={{ width: '100%' }}>
+              <CardContent sx={{ width: '100%' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                   <Typography variant="h6">Gestion des Articles</Typography>
                   <Button startIcon={<AddIcon />} variant="outlined" onClick={() => { setArticleForm({ id: null, designation: '', prix_unitaire: 0, categorie_id: '' }); setOpenArticle(true)}}>
@@ -176,7 +201,7 @@ export default function AdminParamsPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {articles.map(a => (
+                      {paginatedArticles.map(a => (
                         <TableRow key={a.id}>
                           <TableCell>{a.designation}</TableCell>
                           <TableCell>{a.prix_unitaire} MAD</TableCell>
@@ -190,10 +215,23 @@ export default function AdminParamsPage() {
                     </TableBody>
                   </Table>
                 </TableContainer>
+                <TablePagination
+                  component="div"
+                  count={articles.length}
+                  page={artPage}
+                  onPageChange={(e, newPage) => setArtPage(newPage)}
+                  rowsPerPage={artRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setArtRowsPerPage(parseInt(e.target.value, 10))
+                    setArtPage(0)
+                  }}
+                  labelRowsPerPage="Lignes par page :"
+                  rowsPerPageOptions={[5, 10, 25]}
+                />
               </CardContent>
             </Card>
-
-          </Stack>
+            </Grid>
+          </Grid>
         </Grid>
       </Grid>
 

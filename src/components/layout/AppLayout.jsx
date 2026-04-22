@@ -49,7 +49,7 @@ export default function AppLayout() {
           {isAdmin ? (
             // Navigation ADMIN
             <>
-              <NavButton to="/admin/dashboard" label="📊 Dashboard Admin" />
+              <NavButton to="/dashboard" label="📊 Dashboard Admin" />
               <NavButton to="/admin/factures" label="🔍 Valider Factures" />
               <NavButton to="/admin/parametres" label="⚙️ Paramètres" />
             </>

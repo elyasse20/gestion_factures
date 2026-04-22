@@ -26,6 +26,7 @@ import {
   TextField,
   Typography,
   Alert,
+  TablePagination
 } from '@mui/material'
 import { Add as AddIcon, PictureAsPdf as PdfIcon, Visibility as ViewIcon } from '@mui/icons-material'
 import { firebaseService } from '../services/firebaseService'
@@ -56,6 +57,9 @@ export default function InvoicesPage() {
     date_encaissement: '',
     type_virement: '',
   })
+
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const fetchData = async () => {
     try {
@@ -115,6 +119,8 @@ export default function InvoicesPage() {
 
   const client = (inv) => clients.find((c) => c.id === inv.client_id)
 
+  const paginatedInvoices = invoices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
   return (
     <Stack spacing={3}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -158,7 +164,7 @@ export default function InvoicesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                invoices.map((inv) => (
+                paginatedInvoices.map((inv) => (
                   <TableRow key={inv.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{inv.numero}</TableCell>
                     <TableCell>{new Date(inv.date_creation).toLocaleDateString('fr-FR')}</TableCell>
@@ -210,6 +216,19 @@ export default function InvoicesPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={invoices.length}
+          page={page}
+          onPageChange={(e, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10))
+            setPage(0)
+          }}
+          labelRowsPerPage="Lignes par page :"
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
       </Card>
 
       {/* Dialog Suivi facture */}

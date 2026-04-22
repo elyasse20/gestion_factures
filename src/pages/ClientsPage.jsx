@@ -18,7 +18,8 @@ import {
   TextField,
   Typography,
   Alert,
-  CircularProgress
+  CircularProgress,
+  TablePagination
 } from '@mui/material'
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material'
 import { useFormik } from 'formik'
@@ -38,6 +39,8 @@ export default function ClientsPage() {
   const [error, setError] = useState(null)
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const fetchClients = async () => {
     try {
@@ -106,6 +109,8 @@ export default function ClientsPage() {
     }
   }
 
+  const paginatedClients = clients.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+
   return (
     <Stack spacing={3}>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -143,7 +148,7 @@ export default function ClientsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                clients.map((client) => (
+                paginatedClients.map((client) => (
                   <TableRow key={client.id} hover>
                     <TableCell sx={{ fontWeight: 500 }}>{client.nom}</TableCell>
                     <TableCell>{client.email}</TableCell>
@@ -163,6 +168,19 @@ export default function ClientsPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={clients.length}
+          page={page}
+          onPageChange={(e, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10))
+            setPage(0)
+          }}
+          labelRowsPerPage="Lignes par page :"
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
       </Card>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>

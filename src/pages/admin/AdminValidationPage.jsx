@@ -14,6 +14,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  TablePagination,
 } from '@mui/material'
 import {
   CheckCircle as ValidateIcon,
@@ -36,6 +37,11 @@ export default function AdminValidationPage() {
   const [paramsDb, setParamsDb] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const [pendingPage, setPendingPage] = useState(0)
+  const [pendingRowsPerPage, setPendingRowsPerPage] = useState(5)
+  const [treatedPage, setTreatedPage] = useState(0)
+  const [treatedRowsPerPage, setTreatedRowsPerPage] = useState(10)
 
   const fetchData = async () => {
     try {
@@ -87,6 +93,9 @@ export default function AdminValidationPage() {
 
   const pending = invoices.filter((i) => !i.validated_by_admin && i.statut !== 'Rejetée')
   const treated = invoices.filter((i) => i.validated_by_admin || i.statut === 'Rejetée')
+
+  const paginatedPending = pending.slice(pendingPage * pendingRowsPerPage, pendingPage * pendingRowsPerPage + pendingRowsPerPage)
+  const paginatedTreated = treated.slice(treatedPage * treatedRowsPerPage, treatedPage * treatedRowsPerPage + treatedRowsPerPage)
 
   const ClientName = ({ inv }) => {
     const c = clients.find((c) => c.id === inv.client_id)
@@ -198,7 +207,22 @@ export default function AdminValidationPage() {
         {loading ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>Chargement...</Box>
         ) : (
-          <InvTable rows={pending} showActions={true} />
+          <>
+            <InvTable rows={paginatedPending} showActions={true} />
+            <TablePagination
+              component="div"
+              count={pending.length}
+              page={pendingPage}
+              onPageChange={(e, newPage) => setPendingPage(newPage)}
+              rowsPerPage={pendingRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setPendingRowsPerPage(parseInt(e.target.value, 10))
+                setPendingPage(0)
+              }}
+              labelRowsPerPage="Lignes par page :"
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </>
         )}
       </Card>
 
@@ -215,7 +239,22 @@ export default function AdminValidationPage() {
         {loading ? (
           <Box sx={{ p: 3, textAlign: 'center' }}>Chargement...</Box>
         ) : (
-          <InvTable rows={treated} showActions={false} />
+          <>
+            <InvTable rows={paginatedTreated} showActions={false} />
+            <TablePagination
+              component="div"
+              count={treated.length}
+              page={treatedPage}
+              onPageChange={(e, newPage) => setTreatedPage(newPage)}
+              rowsPerPage={treatedRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setTreatedRowsPerPage(parseInt(e.target.value, 10))
+                setTreatedPage(0)
+              }}
+              labelRowsPerPage="Lignes par page :"
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </>
         )}
       </Card>
     </Stack>
