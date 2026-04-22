@@ -13,24 +13,30 @@ import Typography from '@mui/material/Typography'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 const schema = yup.object({
+  // Validation côté UI (avant l'appel d'auth): messages plus rapides et plus clairs.
   email: yup.string().email('Email invalide').required('Email requis'),
   password: yup.string().min(4, 'Minimum 4 caractères').required('Mot de passe requis'),
 })
 
 export default function LoginPage() {
+  // `login` encapsule Firebase Auth + fallback mock (voir AuthContext).
   const { login } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = React.useState(null)
 
   const formik = useFormik({
+    // Formik gère: valeurs, validation, touched, submit (évite du boilerplate).
     initialValues: { email: '', password: '' },
     validationSchema: schema,
     onSubmit: async (values) => {
+      // Reset de l'erreur à chaque tentative (UX).
       setError(null)
       try {
         await login(values)
+        // Une fois connecté, on atterrit sur le dashboard.
         navigate('/dashboard', { replace: true })
       } catch (e) {
+        // On remonte le message (Firebase ou fallback), sinon un générique.
         setError(e?.message || 'Erreur de connexion')
       }
     },
@@ -43,6 +49,7 @@ export default function LoginPage() {
           <Stack spacing={2}>
             <Typography variant="h5">Connexion</Typography>
             <Typography variant="body2" color="text.secondary">
+              {/* Convention de dev: email contenant "admin" => rôle admin (fallback/mock). */}
               Astuce: utilisez un email contenant “admin” pour simuler le rôle admin.
             </Typography>
             {error ? <Alert severity="error">{error}</Alert> : null}

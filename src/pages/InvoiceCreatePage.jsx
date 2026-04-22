@@ -29,24 +29,31 @@ import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 export default function InvoiceCreatePage() {
   const navigate = useNavigate()
+  // `agent_id` est rempli à partir de l'utilisateur connecté (si présent).
   const { user } = useAuth()
   const [clients, setClients] = useState([])
   const [articlesDb, setArticlesDb] = useState([])
   const [categoriesDb, setCategoriesDb] = useState([])
+  // Paramètres globaux (TVA par défaut, préfixe numéro, infos PDF, etc.).
   const [paramsDb, setParamsDb] = useState(null)
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Sélection du client + méthode de calcul.
   const [clientId, setClientId] = useState('')
   const [method, setMethod] = useState('SIMPLE') // SIMPLE, REMISE_LIGNE, REMISE_GLOBALE, CATEGORIE
   const [remiseGlobale, setRemiseGlobale] = useState(0)
 
+  // Lignes de facture: chaque ligne référence un article (articleId) + quantité + remise (si applicable).
   const [lines, setLines] = useState([{ id: Date.now(), articleId: '', quantite: 1, remise: 0 }])
 
   useEffect(() => {
     async function loadData() {
       try {
+        // On charge tout ce qui est nécessaire pour construire une facture:
+        // - clients (Firebase)
+        // - catalogue articles + catégories + paramètres (JSON API)
         const [cls, arts, cats, pars] = await Promise.all([
           firebaseService.listClients(),
           jsonService.listArticles(),
@@ -58,6 +65,7 @@ export default function InvoiceCreatePage() {
         setCategoriesDb(cats)
         setParamsDb(pars)
       } catch (err) {
+        // Message orienté: la création dépend des 2 backends (Firebase + JSON server).
         setError("Erreur de chargement des données. Vérifiez Firebase et le serveur JSON.")
       } finally {
         setLoading(false)
@@ -67,41 +75,47 @@ export default function InvoiceCreatePage() {
   }, [])
 
   const handleAddLine = () => {
+    // Ajoute une ligne vide avec un id unique local (clé React + lookup).
     setLines([...lines, { id: Date.now(), articleId: '', quantite: 1, remise: 0 }])
   }
 
   const handleRemoveLine = (id) => {
+    // On force au moins 1 ligne pour éviter une facture vide.
     if (lines.length > 1) {
       setLines(lines.filter(l => l.id !== id))
     }
   }
 
   const handleLineChange = (id, field, value) => {
+    // Patch immutable d'une ligne (React state friendly).
     setLines(lines.map(l => l.id === id ? { ...l, [field]: value } : l))
   }
 
-  // Calculate totals based on method
+  // Calcule HT / TVA / TTC + lignes enrichies, selon la méthode choisie.
+  // `useMemo` évite de recalculer à chaque frappe si rien n'a changé.
   const calcData = useMemo(() => {
     let ht = 0
     let tvaTotal = 0
     let ttc = 0
+    // TVA par défaut issue des paramètres (sinon 20%).
     const defaultTva = paramsDb?.facturation?.tva_defaut || 0.2
 
     const computedLines = lines.map(line => {
+      // Lookup article (catalogue JSON) pour récupérer prix + désignation + catégorie.
       const art = articlesDb.find(a => Number(a.id) === Number(line.articleId))
       if (!art || !line.quantite || line.quantite < 1) return { ...line, totalLigne: 0, tvaLigne: 0, art: null }
 
       const prixBase = art.prix_unitaire * line.quantite
       let totalLigne = prixBase
 
-      // Remise ligne method
+      // Méthode "remise par ligne": remise (%) appliquée sur le sous-total de la ligne.
       if (method === 'REMISE_LIGNE' && line.remise > 0) {
         totalLigne = prixBase * (1 - line.remise / 100)
       }
 
       let lineTvaRate = defaultTva
 
-      // Categorie method
+      // Méthode "TVA par catégorie": le taux dépend de la catégorie de l'article.
       if (method === 'CATEGORIE') {
         const cat = categoriesDb.find(c => Number(c.id) === Number(art.categorie_id))
         if (cat && cat.tva !== undefined) {
@@ -109,27 +123,34 @@ export default function InvoiceCreatePage() {
         }
       }
 
+      // TVA calculée sur le total ligne (après remise ligne).
       const tvaLigne = totalLigne * lineTvaRate
 
+      // Agrégation des totaux.
       ht += totalLigne
       tvaTotal += tvaLigne
 
+      // On renvoie la ligne enrichie, utilisée pour l'UI et pour persister en DB.
       return { ...line, totalLigne, tvaLigne, art }
     })
 
     if (method === 'REMISE_GLOBALE' && remiseGlobale > 0) {
+      // Méthode "remise globale": remise appliquée sur le HT total.
       const montantRemise = ht * (remiseGlobale / 100)
       ht = ht - montantRemise
-      // Recalculate TVA on discounted HT
+      // Simplification: on recalcule la TVA sur le HT remisé avec le taux par défaut.
+      // (Si on veut une TVA par ligne même en remise globale, il faudrait recalculer ligne par ligne.)
       tvaTotal = ht * defaultTva
     }
 
+    // TTC final.
     ttc = ht + tvaTotal
 
     return { ht, tvaTotal, ttc, computedLines }
   }, [lines, method, remiseGlobale, articlesDb, categoriesDb, paramsDb])
 
   const handleSave = async () => {
+    // Validations côté UI: on évite d'écrire une facture incohérente.
     if (!clientId) {
       setError("Veuillez sélectionner un client")
       return
@@ -141,11 +162,13 @@ export default function InvoiceCreatePage() {
     }
 
     try {
+      // Numéro basé sur un préfixe paramétrable + suffixe temporel (simple et unique "en pratique").
       const numero = `${paramsDb?.facturation?.prefix_numero || 'FAC'}-${Date.now().toString().slice(-6)}`
       const factureData = {
         numero,
         date_creation: new Date().toISOString(),
         client_id: clientId,
+        // On stocke une version "dénormalisée" des lignes (designation/prix) pour figer l'historique.
         articles: calcData.computedLines
           .filter(l => l.art !== null)
           .map(l => ({
@@ -161,11 +184,13 @@ export default function InvoiceCreatePage() {
         total_ht: calcData.ht,
         tva: calcData.tvaTotal,
         total_ttc: calcData.ttc,
+        // Champs de workflow (suivi/validation) initialisés à la création.
         statut: 'En attente',
         date_depot: null,
         date_encaissement: null,
         type_virement: null,
         validated_by_admin: false,
+        // Sert au filtrage "agent" dans Realtime DB (indexé sur agent_id).
         agent_id: user?.uid || null,
       }
 
@@ -177,6 +202,7 @@ export default function InvoiceCreatePage() {
   }
 
   const handleGeneratePDF = () => {
+    // Aperçu PDF: on génère un "mock" non persisté à partir des lignes calculées.
     const client = clients.find(c => c.id === clientId)
     const factureMock = {
       numero: 'A-ENREGISTRER',

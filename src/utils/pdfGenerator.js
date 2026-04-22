@@ -5,13 +5,20 @@ import autoTable from 'jspdf-autotable'
  * Génère et télécharge une facture PDF professionnelle.
  * Compatible jsPDF v2+ / v4+
  *
- * @param {object} facture   - Données de la facture (articles, totaux, numéro…)
- * @param {object} client    - Données du client (nom, adresse, email, tel)
- * @param {object} parametres - Paramètres de la société (societe, facturation)
+ * Données attendues (minimum):
+ * - facture: { numero?, statut?, articles[], total_ht, tva, total_ttc, remise_globale? }
+ * - client:  { nom?, adresse?, email?, tel? }
+ * - parametres: { societe?, facturation? } (ex: nom société affiché + TVA par défaut côté UI)
+ *
+ * @param {object} facture    - Données de la facture (lignes + totaux + numéro)
+ * @param {object} client     - Données du client (bloc "FACTURÉ À")
+ * @param {object} parametres - Paramètres société (bloc "DE" + footer)
  */
 export function generateInvoicePDF(facture, client, parametres) {
+  // Document A4 en mm: facilite le placement avec des coordonnées "visuelles".
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
+  // Palette RGB (tableau) car jsPDF attend des composantes séparées.
   const PRIMARY   = [63, 81, 181]   // Indigo
   const DARK      = [30, 30, 60]
   const LIGHT_BG  = [245, 246, 255]
@@ -19,7 +26,9 @@ export function generateInvoicePDF(facture, client, parametres) {
   const PAGE_W    = 210
   const MARGIN    = 14
 
+  // Paramètres "société" (optionnels): si absents, on affiche des placeholders.
   const societe = parametres?.societe || {}
+  // Date d'édition du PDF (pas forcément = date_creation facture).
   const dateStr = new Date().toLocaleDateString('fr-FR')
 
   // ── Bande de couleur en haut (header) ─────────────────────────────────────
@@ -35,6 +44,7 @@ export function generateInvoicePDF(facture, client, parametres) {
   // Numéro + date (blanc, en haut à droite)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
+  // `facture.numero` peut être absent pour un aperçu: on affiche "Brouillon".
   doc.text(`N° ${facture.numero || 'Brouillon'}`, PAGE_W - MARGIN, 14, { align: 'right' })
   doc.text(`Date : ${dateStr}`, PAGE_W - MARGIN, 19, { align: 'right' })
   if (facture.statut) {
@@ -61,6 +71,7 @@ export function generateInvoicePDF(facture, client, parametres) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8.5)
   doc.setTextColor(...GREY)
+  // Les champs sont optionnels: on ne trace que ce qui existe pour éviter des lignes vides.
   if (societe.adresse) doc.text(societe.adresse, MARGIN + 3, y + 20)
   if (societe.email)   doc.text(societe.email,   MARGIN + 3, y + 26)
   if (societe.tel)     doc.text(societe.tel,      MARGIN + 3, y + 32)
@@ -82,18 +93,22 @@ export function generateInvoicePDF(facture, client, parametres) {
   if (client?.email)   doc.text(client.email,   cx, y + 26)
   if (client?.tel)     doc.text(client.tel,      cx, y + 32)
 
+  // On descend sous les blocs d'en-tête pour démarrer le tableau.
   y += 48
 
   // ── Tableau des articles ──────────────────────────────────────────────────
+  // Formatage des lignes pour autoTable: chaque entrée = tableau de cellules.
   const rows = (facture.articles || []).map(a => [
     a.designation || '—',
     String(a.quantite ?? 1),
     `${Number(a.prix_unitaire || 0).toFixed(2)} MAD`,
     a.remise ? `${a.remise}%` : '—',
+    // `totalLigne` est préféré (plus fiable), sinon fallback quantite*prix_unitaire.
     `${Number(a.totalLigne ?? (a.quantite * a.prix_unitaire)).toFixed(2)} MAD`,
   ])
 
   autoTable(doc, {
+    // startY: place le tableau sous l'en-tête.
     startY: y,
     head: [['Désignation', 'Qté', 'Prix U.', 'Remise', 'Total Ligne']],
     body: rows,
@@ -121,10 +136,12 @@ export function generateInvoicePDF(facture, client, parametres) {
   })
 
   // ── Totaux ────────────────────────────────────────────────────────────────
+  // `lastAutoTable.finalY` donne la coordonnée Y juste après le tableau.
   const tableEndY = doc.lastAutoTable.finalY + 6
   const totX = PAGE_W - MARGIN - 70
 
   doc.setFillColor(...LIGHT_BG)
+  // Le bloc de totaux s'agrandit si remise globale affichée (lignes supplémentaires).
   const remiseRows = facture.remise_globale > 0 ? 5 : 3
   doc.roundedRect(totX - 4, tableEndY - 2, 76, remiseRows * 7 + 6, 2, 2, 'F')
 
@@ -143,6 +160,7 @@ export function generateInvoicePDF(facture, client, parametres) {
     doc.setTextColor(...GREY)
     doc.text(`Remise globale (${facture.remise_globale}%) :`, totX, ty)
     doc.setTextColor([220, 50, 50])
+    // Le montant remise est calculé sur le total HT courant.
     const montantRemise = (facture.total_ht * facture.remise_globale / 100)
     doc.text(`- ${montantRemise.toFixed(2)} MAD`, totX + 68, ty, { align: 'right' })
 
@@ -150,6 +168,7 @@ export function generateInvoicePDF(facture, client, parametres) {
     doc.setTextColor(...GREY)
     doc.text('Net HT :', totX, ty)
     doc.setTextColor(...DARK)
+    // Net HT = HT - remise globale.
     doc.text(`${(facture.total_ht * (1 - facture.remise_globale / 100)).toFixed(2)} MAD`, totX + 68, ty, { align: 'right' })
   }
 
@@ -179,6 +198,7 @@ export function generateInvoicePDF(facture, client, parametres) {
   doc.setFontSize(8.5)
   doc.setTextColor(...GREY)
   doc.text('Signature / Cachet :', MARGIN, sigY)
+  // Cadre vide pour signature/cachet.
   doc.setDrawColor(200, 200, 220)
   doc.setLineWidth(0.3)
   doc.rect(MARGIN, sigY + 3, 60, 18)
@@ -189,11 +209,13 @@ export function generateInvoicePDF(facture, client, parametres) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7.5)
   doc.setTextColor(255, 255, 255)
+  // Footer compact: récap société (si champs vides, on laisse des segments vides).
   doc.text(
     `${societe.nom || 'Ma Société'} — ${societe.adresse || ''} — ${societe.email || ''} — ${societe.tel || ''}`,
     PAGE_W / 2, 292, { align: 'center' }
   )
 
   // ── Sauvegarde ────────────────────────────────────────────────────────────
+  // `doc.save` déclenche le téléchargement dans le navigateur.
   doc.save(`Facture_${facture.numero || 'Nouvelle'}.pdf`)
 }

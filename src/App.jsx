@@ -18,6 +18,7 @@ import ProtectedRoute from './routes/ProtectedRoute.jsx'
 
 export default function App() {
   return (
+    // `AuthProvider` rend user/role/login/logout disponibles partout.
     <AuthProvider>
       <Routes>
         {/* Page publique */}
@@ -29,13 +30,16 @@ export default function App() {
         <Route
           path="/"
           element={
+            // Toutes les routes sous "/" exigent une session.
             <ProtectedRoute>
               <AppLayout />
             </ProtectedRoute>
           }
         >
+          {/* Accès à "/" => redirection vers le dashboard. */}
           <Route index element={<Navigate to="/dashboard" replace />} />
           {/* 1. Dashboard personnel */}
+          {/* NB: actuellement, `AdminDashboardPage` sert aussi de dashboard "user". */}
           <Route path="dashboard" element={<AdminDashboardPage />} />
           {/* 2. Gestion des clients */}
           <Route path="clients" element={<ClientsPage />} />
@@ -51,11 +55,13 @@ export default function App() {
         <Route
           path="/admin"
           element={
+            // Routes admin: nécessite rôle `admin` (sinon redirection).
             <ProtectedRoute role="admin">
               <AppLayout />
             </ProtectedRoute>
           }
         >
+          {/* Accès à "/admin" => dashboard admin. */}
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           {/* 1. Tableau de bord analytique */}
           <Route path="dashboard" element={<AdminDashboardPage />} />

@@ -27,6 +27,7 @@ import * as Yup from 'yup'
 import { firebaseService } from '../services/firebaseService.js'
 
 const ClientSchema = Yup.object().shape({
+  // Validation UI pour éviter d'envoyer des objets incomplets vers Firebase.
   nom: Yup.string().required('Le nom est requis'),
   email: Yup.string().email('Email invalide').required('L\'email est requis'),
   tel: Yup.string().required('Le téléphone est requis'),
@@ -37,14 +38,18 @@ export default function ClientsPage() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  // Dialog "create/edit".
   const [open, setOpen] = useState(false)
+  // Si non null: on est en mode édition, sinon création.
   const [editingId, setEditingId] = useState(null)
+  // Pagination du tableau.
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const fetchClients = async () => {
     try {
       setLoading(true)
+      // Source unique: Realtime Database (nœud "clients").
       const data = await firebaseService.listClients()
       setClients(data)
       setError(null)
@@ -56,10 +61,12 @@ export default function ClientsPage() {
   }
 
   useEffect(() => {
+    // Chargement initial.
     fetchClients()
   }, [])
 
   const formik = useFormik({
+    // Formik gère les valeurs, touched, validation + submit.
     initialValues: {
       nom: '',
       email: '',
@@ -70,11 +77,14 @@ export default function ClientsPage() {
     onSubmit: async (values) => {
       try {
         if (editingId) {
+          // Édition: on met à jour le nœud existant.
           await firebaseService.updateClient(editingId, values)
         } else {
+          // Création: `push` côté service génère une clé unique.
           await firebaseService.createClient(values)
         }
         setOpen(false)
+        // Re-fetch pour synchroniser la table.
         fetchClients()
       } catch (err) {
         setError(err.message)
@@ -84,6 +94,7 @@ export default function ClientsPage() {
 
   const handleOpen = (client = null) => {
     if (client) {
+      // Mode édition: on pré-remplit le formulaire à partir du client sélectionné.
       setEditingId(client.id)
       formik.setValues({
         nom: client.nom,
@@ -92,6 +103,7 @@ export default function ClientsPage() {
         adresse: client.adresse
       })
     } else {
+      // Mode création: formulaire vierge.
       setEditingId(null)
       formik.resetForm()
     }
@@ -99,6 +111,7 @@ export default function ClientsPage() {
   }
 
   const handleDelete = async (id) => {
+    // Confirmation simple avant suppression (irréversible côté Realtime DB).
     if (window.confirm('Voulez-vous vraiment supprimer ce client ?')) {
       try {
         await firebaseService.deleteClient(id)
@@ -109,6 +122,7 @@ export default function ClientsPage() {
     }
   }
 
+  // Pagination: extrait la fenêtre à afficher.
   const paginatedClients = clients.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
   return (

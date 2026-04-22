@@ -91,22 +91,27 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null
 }
 
-// ── Dashboard Utilisateur ──────────────────────────────────────────────────────
+// ── Dashboard Admin ────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
+  // Contexte auth: `role` contrôle l'accès aux données (admin => toutes les factures).
   const { user, role } = useAuth()
   const [invoices, setInvoices]   = useState([])
   const [clients, setClients]     = useState([])
+  // Paramètres (société/TVA/logo) nécessaires notamment pour la génération PDF.
   const [paramsDb, setParamsDb]   = useState(null)
   const [loading, setLoading]     = useState(true)
+  // KPIs "catalogue" gérés via json-server (admin uniquement dans l'UI).
   const [articles, setArticles]   = useState([])
   const [categories, setCategories] = useState([])
   const [error, setError]         = useState(null)
+  // Filtres affichés en haut de page.
   const [period, setPeriod]       = useState('30d') // 7d | 30d | 12m | all
   const [status, setStatus]       = useState('all') // all | Payée | En attente | Rejetée
 
   useEffect(() => {
     async function load() {
       try {
+        // Chargement parallèle: factures, clients, paramètres et catalogue (articles/catégories).
         const [inv, cli, pars, arts, cats] = await Promise.all([
           firebaseService.listFactures(role, user?.uid),
           firebaseService.listClients(),
@@ -114,6 +119,7 @@ export default function AdminDashboardPage() {
           jsonService.listArticles().catch(() => []),
           jsonService.listCategories().catch(() => []),
         ])
+        // UX: plus récent d'abord.
         inv.sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation))
         setInvoices(inv)
         setClients(cli)
@@ -137,16 +143,19 @@ export default function AdminDashboardPage() {
   })()
 
   const clientsById = React.useMemo(() => {
+    // Map pour accéder au client via `client_id` sans faire de find() en boucle.
     const map = new Map()
     clients.forEach((c) => map.set(c.id, c))
     return map
   }, [clients])
 
   const filteredInvoices = React.useMemo(() => {
+    // Filtre temporel (par date_creation).
     const byPeriod = invoices.filter((inv) => {
       const t = inv?.date_creation ? new Date(inv.date_creation).getTime() : 0
       return !periodStart || (t && t >= periodStart)
     })
+    // Filtre statut (si "all" => pas de filtre).
     if (status === 'all') return byPeriod
     return byPeriod.filter((inv) => (inv?.statut || '—') === status)
   }, [invoices, periodStart, status])
@@ -194,6 +203,7 @@ export default function AdminDashboardPage() {
     .map(([name, ca]) => ({ name, ca }))
 
   const handleDownloadPdf = (inv) => {
+    // PDF: on enrichit avec le client + paramètres société.
     const cli = clientsById.get(inv.client_id)
     generateInvoicePDF(inv, cli, paramsDb)
   }

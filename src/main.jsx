@@ -8,8 +8,11 @@ import App from './App.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
+    {/* Thème global MUI (palette, typographie, overrides composants). */}
     <ThemeProvider theme={theme}>
+      {/* Normalisation CSS cross-browser + styles MUI de base. */}
       <CssBaseline />
+      {/* Router HTML5: gère les URL côté client. */}
       <BrowserRouter>
         <App />
       </BrowserRouter>

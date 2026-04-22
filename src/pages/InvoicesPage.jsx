@@ -40,17 +40,20 @@ const STATUS_COLORS = {
   'Rejetée': 'error',
 }
 
+// Types proposés pour décrire le moyen d'encaissement (champ de suivi).
 const VIREMENT_TYPES = ['Virement bancaire', 'Chèque', 'Espèces', 'Carte bancaire', 'Autre']
 
 export default function InvoicesPage() {
+  // Identité + rôle: détermine si on voit toutes les factures (admin) ou seulement celles de l'agent.
   const { user, role } = useAuth()
   const [invoices, setInvoices] = useState([])
   const [clients, setClients] = useState([])
+  // Paramètres "société" (logo, TVA, etc.) utilisés pour générer le PDF.
   const [paramsDb, setParamsDb] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Suivi dialog
+  // ── Dialog "Suivi" (mise à jour des champs de statut/dates) ───────────────
   const [suiviOpen, setSuiviOpen] = useState(false)
   const [selectedInv, setSelectedInv] = useState(null)
   const [suiviForm, setSuiviForm] = useState({
@@ -60,17 +63,20 @@ export default function InvoicesPage() {
     type_virement: '',
   })
 
+  // Pagination du tableau (côté client).
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const fetchData = async () => {
     try {
       setLoading(true)
+      // Charge tout ce qui est nécessaire pour afficher: lignes, nom client, et génération PDF.
       const [invData, cliData, parData] = await Promise.all([
         firebaseService.listFactures(role, user?.uid),
         firebaseService.listClients(),
         jsonService.getParams(),
       ])
+      // UX: les plus récentes d'abord.
       invData.sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation))
       setInvoices(invData)
       setClients(cliData)
@@ -83,12 +89,15 @@ export default function InvoicesPage() {
     }
   }
 
+  // Au montage: premier chargement.
   useEffect(() => { fetchData() }, [])
 
   const handleOpenSuivi = (inv) => {
+    // Prépare le formulaire à partir de la facture sélectionnée.
     setSelectedInv(inv)
     setSuiviForm({
       statut: inv.statut || 'En attente',
+      // Input HTML date attend "YYYY-MM-DD": on tronque l'ISO.
       date_depot: inv.date_depot ? inv.date_depot.substring(0, 10) : '',
       date_encaissement: inv.date_encaissement ? inv.date_encaissement.substring(0, 10) : '',
       type_virement: inv.type_virement || '',
@@ -98,6 +107,7 @@ export default function InvoicesPage() {
 
   const handleSaveSuivi = async () => {
     try {
+      // Normalisation: on stocke des ISO (ou null) dans la DB.
       const updates = {
         statut: suiviForm.statut,
         type_virement: suiviForm.type_virement || null,
@@ -108,6 +118,7 @@ export default function InvoicesPage() {
       }
       await firebaseService.updateFacture(selectedInv.id, updates)
       setSuiviOpen(false)
+      // Recharge pour refléter les changements (statut, dates, type).
       fetchData()
     } catch (err) {
       setError(err.message)
@@ -115,12 +126,15 @@ export default function InvoicesPage() {
   }
 
   const handleDownloadPdf = (facture) => {
+    // PDF: on enrichit la facture avec le client + paramètres (logo/coordonnées).
     const client = clients.find((c) => c.id === facture.client_id)
     generateInvoicePDF(facture, client, paramsDb)
   }
 
+  // Helper de lookup client (simple mais réutilisé dans le tableau).
   const client = (inv) => clients.find((c) => c.id === inv.client_id)
 
+  // Pagination: on découpe la liste totale à afficher à l'écran.
   const paginatedInvoices = invoices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
 
   return (

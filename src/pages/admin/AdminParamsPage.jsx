@@ -25,28 +25,30 @@ import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, Save as SaveIco
 import { jsonService } from '../../services/jsonService'
 
 export default function AdminParamsPage() {
+  // Catalogue (articles/catégories) + params "société" sont fournis par l'API JSON (json-server).
   const [articles, setArticles] = useState([])
   const [categories, setCategories] = useState([])
   const [params, setParams] = useState(null)
   const [error, setError] = useState(null)
 
-  // Dialogs
+  // Dialogs (création/édition)
   const [openArticle, setOpenArticle] = useState(false)
   const [openCategory, setOpenCategory] = useState(false)
   
-  // Pagination states
+  // Pagination (côté client) séparée pour catégories et articles.
   const [catPage, setCatPage] = useState(0)
   const [catRowsPerPage, setCatRowsPerPage] = useState(5)
   const [artPage, setArtPage] = useState(0)
   const [artRowsPerPage, setArtRowsPerPage] = useState(5)
 
-  // Forms states
+  // État des formulaires (dialog) + infos société.
   const [articleForm, setArticleForm] = useState({ id: null, designation: '', prix_unitaire: 0, categorie_id: '' })
   const [categoryForm, setCategoryForm] = useState({ id: null, nom: '', tva: 0 })
   const [companyForm, setCompanyForm] = useState({ nom: '', adresse: '', email: '', tel: '' })
 
   const loadData = async () => {
     try {
+      // Charge tout ce qui alimente la page (3 endpoints).
       const [art, cat, par] = await Promise.all([
         jsonService.listArticles(),
         jsonService.listCategories(),
@@ -55,6 +57,7 @@ export default function AdminParamsPage() {
       setArticles(art)
       setCategories(cat)
       setParams(par)
+      // On éditera uniquement `societe` via `companyForm` (voir handleSaveParams).
       setCompanyForm(par?.societe || { nom: '', adresse: '', email: '', tel: '' })
     } catch (err) {
       setError(err.message)
@@ -62,12 +65,14 @@ export default function AdminParamsPage() {
   }
 
   useEffect(() => {
+    // Chargement initial.
     loadData()
   }, [])
 
-  // Categories CRUD
+  // ── Categories CRUD ────────────────────────────────────────────────────────
   const handleSaveCategory = async () => {
     try {
+      // Si id existe => édition, sinon création.
       if (categoryForm.id) await jsonService.updateCategory(categoryForm.id, categoryForm)
       else await jsonService.createCategory({ nom: categoryForm.nom, tva: categoryForm.tva })
       setOpenCategory(false)
@@ -75,12 +80,13 @@ export default function AdminParamsPage() {
     } catch(err) { setError(err.message) }
   }
   const handleDeleteCategory = async (id) => {
+    // Confirmation simple avant suppression.
     if(window.confirm('Supprimer cette catégorie ?')) {
       try { await jsonService.deleteCategory(id); loadData() } catch(err) { setError(err.message) }
     }
   }
 
-  // Articles CRUD
+  // ── Articles CRUD ──────────────────────────────────────────────────────────
   const handleSaveArticle = async () => {
     try {
       if (articleForm.id) await jsonService.updateArticle(articleForm.id, articleForm)
@@ -95,14 +101,16 @@ export default function AdminParamsPage() {
     }
   }
 
-  // Company Settings
+  // ── Company Settings ───────────────────────────────────────────────────────
   const handleSaveParams = async () => {
     try {
+      // On persiste uniquement la partie `societe` en réutilisant les autres champs existants.
       await jsonService.updateParams({ ...params, societe: companyForm })
       alert('Paramètres enregistrés !')
     } catch(err) { setError(err.message) }
   }
 
+  // Pagination: fenêtre affichée pour chaque table.
   const paginatedCategories = categories.slice(catPage * catRowsPerPage, catPage * catRowsPerPage + catRowsPerPage)
   const paginatedArticles = articles.slice(artPage * artRowsPerPage, artPage * artRowsPerPage + artRowsPerPage)
 

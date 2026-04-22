@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "factures": {
+      ".indexOn": ["agent_id"]
+    }
+  }
+}
+

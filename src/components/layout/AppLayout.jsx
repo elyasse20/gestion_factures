@@ -11,12 +11,14 @@ import { useAuth } from '../../contexts/AuthContext.jsx'
 
 function NavButton({ to, label }) {
   const location = useLocation()
+  // "actif" si on est exactement sur la route ou dans un sous-chemin (ex: /factures/nouvelle).
   const active = location.pathname === to || location.pathname.startsWith(`${to}/`)
   return (
     <Button
       component={RouterLink}
       to={to}
       sx={{
+        // Styles différents pour rendre l'onglet actif plus visible.
         textTransform: 'none',
         fontWeight: active ? 700 : 500,
         color: active ? 'primary.main' : 'text.secondary',
@@ -32,6 +34,7 @@ function NavButton({ to, label }) {
 }
 
 export default function AppLayout() {
+  // Données d'auth pour afficher l'email, le rôle et permettre la déconnexion.
   const { user, role, logout } = useAuth()
   const isAdmin = role === 'admin'
 
@@ -63,6 +66,7 @@ export default function AppLayout() {
           )}
 
           <Chip
+            // Indication rapide du rôle actif (utile en mode mock dev).
             label={isAdmin ? '🔐 Admin' : '👤 Agent'}
             size="small"
             color={isAdmin ? 'secondary' : 'default'}
@@ -72,6 +76,7 @@ export default function AppLayout() {
             {user?.email ?? 'connecté'}
           </Typography>
           <Button
+            // `logout` gère Firebase Auth + fallback mock (voir AuthContext).
             onClick={logout}
             size="small"
             sx={{ textTransform: 'none', ml: 1, color: 'error.main', borderColor: 'error.light', border: '1px solid' }}
@@ -82,6 +87,7 @@ export default function AppLayout() {
       </AppBar>
 
       <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, md: 4 } }}>
+        {/* Point d'insertion React Router: rend la page courante dans le layout. */}
         <Outlet />
       </Container>
     </Box>

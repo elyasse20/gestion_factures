@@ -2,6 +2,7 @@ import { createTheme } from '@mui/material/styles'
 
 export const theme = createTheme({
   palette: {
+    // Palette claire "moderne" (inspirée Tailwind).
     mode: 'light',
     primary: {
       main: '#4F46E5', // Indigo 600
@@ -16,6 +17,7 @@ export const theme = createTheme({
       contrastText: '#FFFFFF',
     },
     background: {
+      // Couleur de fond des pages (default) + des surfaces (paper).
       default: '#F9FAFB', // Gray 50
       paper: '#FFFFFF',
     },
@@ -38,6 +40,7 @@ export const theme = createTheme({
     divider: 'rgba(0, 0, 0, 0.08)',
   },
   typography: {
+    // Police globale + variantes titres (Outfit) pour un look plus "produit".
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: { fontFamily: '"Outfit", sans-serif', fontWeight: 700 },
     h2: { fontFamily: '"Outfit", sans-serif', fontWeight: 700 },
@@ -55,12 +58,14 @@ export const theme = createTheme({
     },
   },
   shape: {
+    // Rayon par défaut des composants (cards, menus, etc.).
     borderRadius: 12,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
+          // Boutons un peu plus "pills" + hover lift léger.
           borderRadius: '8px',
           padding: '8px 16px',
           boxShadow: 'none',
@@ -71,12 +76,14 @@ export const theme = createTheme({
           },
         },
         containedPrimary: {
+          // Dégradé primaire pour les actions principales.
           background: 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)',
           '&:hover': {
             background: 'linear-gradient(135deg, #4338CA 0%, #312E81 100%)',
           },
         },
         containedSecondary: {
+          // Dégradé secondaire pour différencier certaines actions.
           background: 'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)',
           '&:hover': {
             background: 'linear-gradient(135deg, #DB2777 0%, #9D174D 100%)',
@@ -87,6 +94,7 @@ export const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
+          // Supprime le "bruit" de fond MUI sur certaines variantes.
           backgroundImage: 'none',
         },
         elevation1: {
@@ -103,6 +111,7 @@ export const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
+          // Cartes "soft" avec bord léger + hover.
           borderRadius: '16px',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
           transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
@@ -117,6 +126,7 @@ export const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
+          // AppBar translucide + blur (effet "glass").
           background: 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(12px)',
           color: '#111827',
@@ -128,6 +138,7 @@ export const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         head: {
+          // En-têtes de tables plus lisibles (fond clair + police Outfit).
           fontWeight: 600,
           backgroundColor: '#F9FAFB',
           color: '#4B5563',

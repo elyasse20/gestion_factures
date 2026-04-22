@@ -32,12 +32,14 @@ const STATUS_COLORS = {
 }
 
 export default function AdminValidationPage() {
+  // Factures + clients sont lus depuis Firebase; params sert au PDF.
   const [invoices, setInvoices] = useState([])
   const [clients, setClients] = useState([])
   const [paramsDb, setParamsDb] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Pagination séparée: une table pour "en attente", une autre pour l'historique traité.
   const [pendingPage, setPendingPage] = useState(0)
   const [pendingRowsPerPage, setPendingRowsPerPage] = useState(5)
   const [treatedPage, setTreatedPage] = useState(0)
@@ -46,11 +48,13 @@ export default function AdminValidationPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
+      // L'admin force la lecture complète des factures (pas de filtre agent).
       const [invData, cliData, parData] = await Promise.all([
         firebaseService.listFactures('admin'),
         firebaseService.listClients(),
         jsonService.getParams(),
       ])
+      // UX: plus récentes d'abord.
       invData.sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation))
       setInvoices(invData)
       setClients(cliData)
@@ -63,21 +67,25 @@ export default function AdminValidationPage() {
     }
   }
 
+  // Chargement initial.
   useEffect(() => { fetchData() }, [])
 
   const handleValidate = async (id) => {
     try {
+      // Validation admin: la facture passe en "Payée" et on pose une date d'encaissement.
       await firebaseService.updateFacture(id, {
         validated_by_admin: true,
         statut: 'Payée',
         date_encaissement: new Date().toISOString(),
       })
+      // Re-fetch pour afficher l'état à jour (elle sort de "en attente").
       fetchData()
     } catch (err) { setError(err.message) }
   }
 
   const handleReject = async (id) => {
     try {
+      // Rejet admin: on marque explicitement le statut (et validated_by_admin reste false).
       await firebaseService.updateFacture(id, {
         validated_by_admin: false,
         statut: 'Rejetée',
@@ -87,22 +95,29 @@ export default function AdminValidationPage() {
   }
 
   const handleDownloadPdf = (facture) => {
+    // PDF: nécessite les infos client + paramètres société.
     const client = clients.find((c) => c.id === facture.client_id)
     generateInvoicePDF(facture, client, paramsDb)
   }
 
+  // Regroupement "métier":
+  // - pending: pas encore validée, et pas explicitement rejetée
+  // - treated: validée OU rejetée
   const pending = invoices.filter((i) => !i.validated_by_admin && i.statut !== 'Rejetée')
   const treated = invoices.filter((i) => i.validated_by_admin || i.statut === 'Rejetée')
 
+  // Pagination appliquée séparément sur chaque liste.
   const paginatedPending = pending.slice(pendingPage * pendingRowsPerPage, pendingPage * pendingRowsPerPage + pendingRowsPerPage)
   const paginatedTreated = treated.slice(treatedPage * treatedRowsPerPage, treatedPage * treatedRowsPerPage + treatedRowsPerPage)
 
   const ClientName = ({ inv }) => {
+    // Petit composant de rendu: transforme client_id -> nom.
     const c = clients.find((c) => c.id === inv.client_id)
     return c?.nom || '—'
   }
 
   const InvTable = ({ rows, showActions }) => (
+    // Table réutilisable: `showActions` détermine si on affiche valider/rejeter.
     <TableContainer>
       <Table size="small">
         <TableHead>
